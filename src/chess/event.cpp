@@ -29,3 +29,9 @@ bool Event::isLast() const
 {
 	return next == nullptr;
 }
+
+Event::~Event()
+{
+	if (next != nullptr)
+		delete next;
+}
