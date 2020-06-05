@@ -1,33 +1,47 @@
 #pragma once
 
-// An event is a chain of events,
-// represented as a double-linked list
-class Event
+#include "board.h"
+
+enum Square;
+
+class BoardEvent
 {
-protected:
-	// It is discouraged to add events in
-	// the middle of event chains, just like
-	// travelling back in time can alter the
-	// future and things may not make sense
-	Event(Event *previous = nullptr);
-
 public:
-	// Get previous and next events
-	// If first, previous is nullptr
-	// If last, next is nullptr
-	Event* getPrevious() const;
-	Event* getNext() const;
+	virtual ~BoardEvent() = 0;
 
-	// Check if event is first or last
-	// in the chain of events
-	bool isFirst() const;
-	bool isLast() const;
+	// Check if event is valid
+	virtual bool isValid() const
+	{
+		return true;
+	}
 
-	// One event is responsible for deleting all
-	// successive ones, much like one event affects
-	// all the upcoming ones
-	~Event();
+	// Apply event to board, returning
+	// whether it could be applied or not
+	virtual bool operator()(Board& board) const
+	{
+		return true;
+	}
+};
+
+class Move : BoardEvent
+{
+public:
+	Move(Square origin, Square dest);
+
+	bool isValid() const override;
+	bool operator()(Board& board) const override;
 private:
-	Event* previous;
-	Event* next;
+	Square origin, dest;
+};
+
+class Promotion : BoardEvent
+{
+	bool isValid() const override;
+	bool operator()(Board& board) const override;
+};
+
+class Castling : BoardEvent
+{
+	bool isValid() const override;
+	bool operator()(Board& board) const override;
 };
