@@ -1,51 +1,263 @@
 #include "event.h"
 
+#include "game.h"
+#include "board.h"
 #include "types.h"
 
 Move::Move(Square origin, Square dest) :
 	origin(origin), dest(dest)
 {}
 
-bool Move::isValid() const
+bool Move::isValid(Game const& game) const
 {
-	return SquareCheck(origin) &&
-		   SquareCheck(dest) &&
-		   origin != dest;
+	if (!SquareCheck(origin) || !SquareCheck(dest) || origin != dest)
+		return false;
+
+	auto const& moved_piece = game.getBoard()[origin];
+
+	if (moved_piece.getColour() != game.getTurn())
+		return false;
+
+	auto const& captured_piece = game.getBoard()[dest];
+
+	if (captured_piece.getType() != PieceTypeId::NONE &&
+		captured_piece.getColour() == game.getTurn())
+		return false;
+
+	if (captured_piece.getType() == PieceTypeId::KING)
+		return false;
+
+	return moved_piece.getType().canApply(game, *this);
 }
 
-bool Move::operator()(Board& board) const
+Square Move::getOrigin() const
 {
-	// 1. How am I going to know if the last move was a pawn
-	// walking two ranks and which one was it? (En passant)
-	// AW: There has to be information in the Board class
-	// indicating such informations
+	return origin;
+}
 
-	// 2. The king cannot be captured! Only placed in check!
+Square Move::getDestination() const
+{
+	return dest;
+}
 
-	// 3. A capture is determined by the final destination
-	// having an enemy piece (except for En Passant)
-
-	// 4. The move of each piece type must be validated
-
-	// 5. There must be a piece at the origin and this piece
-	// must be of the same colour as the current players'
-	// colour. How will this be checked?
-	// AW: There has to be a 'turn' information in the board
+void Move::operator()(Game& game) const
+{
+	auto& board = game.getBoard();
+	auto& origpiece = board[origin];
+	auto& destpiece = board[dest];
 	
-	// 6. It should be checked for pieces that move widely
-	// across the board (bishops, queens and rooks), if there
-	// are any pieces on the way! How?
-	// These pieces have a direction that is multiple of
-	// any of the cardinal directions (N, S, W, E, NE, NW, SE, SW).
-	// Check first if the direction IS in fact a multiple of
-	// any of those directions (which is restricted for given pieces)
-	// and add one by one, checking if there are any pieces.
+	destpiece = origpiece;
+	origpiece.setType(EmptyTile {});
 
-	// 7. A pawn moves strangely. If never moved (rank 2 or 7),
-	// it can either move one or two houses towards the enemy side
-	// (which depends on the colour). Once moved, it can only move
-	// one rank at a time. A pawn can also move diagonally (also in the
-	// directed imposed by the colour) if there is a piece there.
+	destpiece.getType().afterApplied(game, *this);
+}
 
-	return false;
+bool Pawn::canApply(Game const& g, Move const& m) const
+{
+	auto orig = m.getOrigin();
+	auto dest = m.getDestination();
+	Direction dir = dest - orig;
+	auto const& origpiece = g.getBoard()[orig];
+	auto const& destpiece = g.getBoard()[dest];
+
+	if (origpiece.getColour() == Colour::BLACK) {
+		orig = ~orig;
+		dest = ~dest;
+		dir = -dir;
+	}
+
+	auto enpassant = g.getEnPassantPawn();
+	auto enpassant_sq = getEnPassantPawnSquare(enpassant);
+
+	if (destpiece.getType() == PieceTypeId::NONE || enpassant_sq == dest) {
+		return (getSquareRank(orig) == RK_2 && dir == DIR_NORTH * 2) ||
+			   dir == DIR_NORTH;
+	} else {
+		return dir == DIR_NORTHEAST ||
+			   dir == DIR_NORTHWEST;
+	}
+}
+
+bool King::canApply(Game const& g, Move const& m) const
+{
+	auto orig = m.getOrigin();
+	auto dest = m.getDestination();
+
+	auto orig_rank = getSquareRank(orig);
+	auto orig_file = getSquareFile(orig);
+
+	return (orig_rank != RK_1 && orig + DIR_SOUTH == dest) ||
+		   (orig_rank != RK_8 && orig + DIR_NORTH == dest) ||
+		   (orig_file != FL_A && orig + DIR_WEST  == dest) ||
+		   (orig_file != FL_H && orig + DIR_EAST  == dest);
+}
+
+bool Knight::canApply(Game const& g, Move const& m) const
+{
+	auto dir = m.getDestination() - m.getOrigin();
+
+	return dir == DIR_NORTH * 2 + DIR_EAST ||
+		   dir == DIR_NORTH * 2 + DIR_WEST ||
+		   dir == DIR_SOUTH * 2 + DIR_EAST ||
+		   dir == DIR_SOUTH * 2 + DIR_WEST ||
+		   dir == DIR_NORTH + 2 * DIR_EAST ||
+		   dir == DIR_NORTH + 2 * DIR_WEST ||
+		   dir == DIR_SOUTH + 2 * DIR_EAST ||
+		   dir == DIR_SOUTH + 2 * DIR_WEST;
+}
+
+bool Bishop::canApply(Game const& g, Move const& m) const
+{
+	auto orig = m.getOrigin();
+	auto dest = m.getDestination();
+
+	auto orig_rank = getSquareRank(orig);
+	auto orig_file = getSquareFile(orig);
+
+	auto dest_rank = getSquareRank(dest);
+	auto dest_file = getSquareFile(dest);
+
+	Direction dir = DIR_NONE;
+
+	if (dest_file > orig_file)
+		dir += DIR_EAST;
+	else if (dest_file < orig_file)
+		dir += DIR_WEST;
+
+	if (dest_rank > orig_rank)
+		dir += DIR_NORTH;
+	else if (dest_rank < orig_rank)
+		dir += DIR_SOUTH;
+	
+	while (true) {
+		
+		// Check if, if followed a diagonal,
+		// would the piece fall off the board.
+		switch (dir) {
+		case DIR_NORTHWEST:
+			if (orig_rank == RK_8 ||
+				orig_file == FL_A)
+				return false;
+		case DIR_NORTHEAST:
+			if (orig_rank == RK_8 ||
+				orig_file == FL_H)
+				return false;
+		case DIR_SOUTHWEST:
+			if (orig_rank == RK_1 ||
+				orig_file == FL_A)
+				return false;
+		case DIR_SOUTHEAST:
+			if (orig_rank == RK_1 ||
+				orig_file == FL_H)
+				return false;
+		default:
+			// Invalid direction
+			return false;
+		}
+
+		// Goes one move further in the direction
+		orig += dir;
+
+		// If has reached the destination, it is a diagonal
+		if (orig == dest)
+			return true;
+
+		// If hasn't reached yet, there must be no piece there!
+		if (g.getBoard()[orig].getType() != PieceTypeId::NONE)
+			return false;
+
+		// Update original square's rank and file
+		auto orig_rank = getSquareRank(orig);
+		auto orig_file = getSquareFile(orig);
+	}
+}
+
+bool Rook::canApply(Game const& g, Move const& m) const
+{
+	auto orig = m.getOrigin();
+	auto dest = m.getDestination();
+
+	auto orig_rank = getSquareRank(orig);
+	auto orig_file = getSquareFile(orig);
+
+	auto dest_rank = getSquareRank(dest);
+	auto dest_file = getSquareFile(dest);
+
+	Direction dir = DIR_NONE;
+
+	if (dest_file > orig_file)
+		dir += DIR_EAST;
+	else if (dest_file < orig_file)
+		dir += DIR_WEST;
+
+	if (dest_rank > orig_rank)
+		dir += DIR_NORTH;
+	else if (dest_rank < orig_rank)
+		dir += DIR_SOUTH;
+
+	while (true) {
+
+		// Check if, if followed a line,
+		// would the piece fall off the board.
+		switch (dir) {
+		case DIR_NORTH:
+			if (orig_rank == RK_8)
+				return false;
+		case DIR_SOUTH:
+			if (orig_rank == RK_1)
+				return false;
+		case DIR_WEST:
+			if (orig_file == FL_A)
+				return false;
+		case DIR_EAST:
+			if (orig_file == FL_H)
+				return false;
+		default:
+			// Invalid direction
+			return false;
+		}
+
+		// Goes one move further in the direction
+		orig += dir;
+
+		// If has reached the destination, it is a line
+		if (orig == dest)
+			return true;
+
+		// If hasn't reached yet, there must be no piece there!
+		if (g.getBoard()[orig].getType() != PieceTypeId::NONE)
+			return false;
+
+		// Update original square's rank and file
+		auto orig_rank = getSquareRank(orig);
+		auto orig_file = getSquareFile(orig);
+	}
+}
+
+bool Queen::canApply(Game const& g, Move const& m) const
+{
+	return Rook().canApply(g, m) || Bishop().canApply(g, m);
+}
+
+void Pawn::afterApplied(Game& g, Move const& m) const
+{
+	Direction dir = m.getDestination() - m.getOrigin();
+
+	if (dir == DIR_NORTH * 2 || dir == DIR_SOUTH * 2) {
+		Direction half_dir = Direction((int) dir / 2);
+		g.setEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
+	} else {
+		EnPassantPawn enpassant = g.getEnPassantPawn();
+		if (enpassant != EnPassantPawn::NONE) {
+			Square enpassant_sq = getEnPassantPawnSquare(enpassant);
+			if (enpassant_sq == m.getDestination()) {
+				Square current_pawn_sq = enpassant_sq;
+				if (getSquareRank(enpassant_sq) == RK_3)
+					current_pawn_sq += DIR_SOUTH; // White pawn
+				else
+					current_pawn_sq += DIR_NORTH; // Black pawn
+				g.getBoard()[current_pawn_sq].setType(EmptyTile {});
+			}
+		}
+	}
 }

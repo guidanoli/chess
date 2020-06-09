@@ -1,47 +1,45 @@
 #pragma once
 
-#include "board.h"
-
+class Game;
 enum Square;
+enum class PieceTypeId;
+enum class Colour;
 
-class BoardEvent
+class Event
 {
 public:
-	virtual ~BoardEvent() = 0;
+	virtual ~Event() = 0;
 
-	// Check if event is valid
-	virtual bool isValid() const
-	{
-		return true;
-	}
+	// Check if event is valid and can be
+	// safely applied to game state
+	virtual bool isValid(Game const& game) const = 0;
 
-	// Apply event to board, returning
-	// whether it could be applied or not
-	virtual bool operator()(Board& board) const
-	{
-		return true;
-	}
+	// Apply event to game state
+	virtual void operator()(Game& game) const = 0;
 };
 
-class Move : BoardEvent
+class Move : Event
 {
 public:
 	Move(Square origin, Square dest);
 
-	bool isValid() const override;
-	bool operator()(Board& board) const override;
+	Square getOrigin() const;
+	Square getDestination() const;
+
+	bool isValid(Game const& game) const override;
+	void operator()(Game& game) const override;
 private:
 	Square origin, dest;
 };
 
-class Promotion : BoardEvent
+class Promotion : Event
 {
-	bool isValid() const override;
-	bool operator()(Board& board) const override;
+	bool isValid(Game const& game) const override;
+	void operator()(Game& game) const override;
 };
 
-class Castling : BoardEvent
+class Castling : Event
 {
-	bool isValid() const override;
-	bool operator()(Board& board) const override;
+	bool isValid(Game const& game) const override;
+	void operator()(Game& game) const override;
 };
