@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #if defined(_MSC_VER)
 #pragma warning(disable: 26812) // Unescoped enum type
 #endif
@@ -44,13 +46,14 @@ enum Direction : int
 
 enum class PieceTypeId
 {
-	NONE = 0,
-	PAWN = 1 << 1,
-	KING = 2 << 1,
-	QUEEN = 3 << 1,
-	BISHOP = 4 << 1,
-	KNIGHT = 5 << 1,
-	ROOK = 6 << 1
+	NONE,
+	PAWN,
+	KING,
+	QUEEN,
+	BISHOP,
+	KNIGHT,
+	ROOK,
+	MAX
 };
 
 enum class Colour
@@ -62,76 +65,87 @@ enum class Colour
 class Game;
 class Move;
 
-struct PieceType
+class PieceType
 {
+public:
+	PieceType(PieceTypeId id = PieceTypeId::NONE) : id(id) {}
+
 	virtual bool canApply(Game const& g, Move const& m) const { return false; }
-	virtual void afterApplied(Game& g, Move const& m) const { }
+	virtual void afterApplied(Game& g, Move const& m) const {}
 
-	virtual PieceTypeId getId() const { return PieceTypeId::NONE; }
+	PieceTypeId getId() const { return id; }
 	operator PieceTypeId() const { return getId(); }
-	friend bool operator==(PieceType const& a, PieceType const& b) {
-		return a.getId() == b.getId();
-	}
+private:
+	PieceTypeId id;
 };
 
-struct EmptyTile : PieceType {};
+class EmptyTile : public PieceType {};
 
-struct Pawn : PieceType {
-	bool canApply(Game const& g, Move const& m) const;
-	void afterApplied(Game& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::PAWN; }
-};
-
-struct King : PieceType
+class Pawn : public PieceType
 {
-	bool canApply(Game const& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::KING; }
+public:
+	Pawn() : PieceType(PieceTypeId::PAWN) {}
+	bool canApply(Game const& g, Move const& m) const override;
+	void afterApplied(Game& g, Move const& m) const override;
 };
 
-struct Queen : PieceType
+class King : public PieceType
 {
-	bool canApply(Game const& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::QUEEN; }
+public:
+	King() : PieceType(PieceTypeId::KING) {}
+	bool canApply(Game const& g, Move const& m) const override;
 };
 
-struct Bishop : PieceType
+class Queen : public PieceType
 {
-	bool canApply(Game const& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::BISHOP; }
+public:
+	Queen() : PieceType(PieceTypeId::QUEEN) {}
+	bool canApply(Game const& g, Move const& m) const override;
 };
 
-struct Knight : PieceType
+class Bishop : public PieceType
 {
-	bool canApply(Game const& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::KNIGHT; }
+public:
+	Bishop() : PieceType(PieceTypeId::BISHOP) {}
+	bool canApply(Game const& g, Move const& m) const override;
 };
 
-struct Rook : PieceType
+class Knight : public PieceType
 {
-	bool canApply(Game const& g, Move const& m) const;
-	PieceTypeId getId() const { return PieceTypeId::ROOK; }
+public:
+	Knight() : PieceType(PieceTypeId::KNIGHT) {}
+	bool canApply(Game const& g, Move const& m) const override;
+};
+
+class Rook : public PieceType
+{
+public:
+	Rook() : PieceType(PieceTypeId::ROOK) {}
+	bool canApply(Game const& g, Move const& m) const override;
 };
 
 class Piece
 {
 public:
 	Piece() :
-		type(EmptyTile{}), c(Colour::WHITE) {}
-	Piece(PieceType type, Colour c) :
-		type(type), c(c) {}
+		type(std::make_shared<EmptyTile>()), c(Colour::WHITE) {}
 	Piece(Piece const& p) :
 		type(p.type), c(p.c) {}
-	PieceType getType() const { return type; }
+	Piece(std::shared_ptr<PieceType> type, Colour c) :
+		type(type), c(c) {}
+
+	std::shared_ptr<PieceType> getType() const { return type; }
 	Colour getColour() const { return c; }
-	void setType(PieceType& t) { type = t; }
+	void setType(std::shared_ptr<PieceType> t) { type = t; }
 	void setColour(Colour cl) { c = cl; }
+
 	Piece& operator=(Piece& p) {
 		type = p.type;
 		c = p.c;
 		return *this;
 	}
 private:
-	PieceType type;
+	std::shared_ptr<PieceType> type;
 	Colour c;
 };
 
@@ -157,22 +171,22 @@ enum class CastlingRook
 enum class EnPassantPawn
 {
 	NONE     = SQ_CNT,
-	WHITE_A6 = SQ_A6,
-	WHITE_B6 = SQ_B6,
-	WHITE_C6 = SQ_C6,
-	WHITE_D6 = SQ_D6,
-	WHITE_E6 = SQ_E6,
-	WHITE_F6 = SQ_F6,
-	WHITE_G6 = SQ_G6,
-	WHITE_H6 = SQ_H6,
-	BLACK_A3 = SQ_A3,
-	BLACK_B3 = SQ_B3,
-	BLACK_C3 = SQ_C3,
-	BLACK_D3 = SQ_D3,
-	BLACK_E3 = SQ_E3,
-	BLACK_F3 = SQ_F3,
-	BLACK_G3 = SQ_G3,
-	BLACK_H3 = SQ_H3,
+	BLACK_A6 = SQ_A6,
+	BLACK_B6 = SQ_B6,
+	BLACK_C6 = SQ_C6,
+	BLACK_D6 = SQ_D6,
+	BLACK_E6 = SQ_E6,
+	BLACK_F6 = SQ_F6,
+	BLACK_G6 = SQ_G6,
+	BLACK_H6 = SQ_H6,
+	WHITE_A3 = SQ_A3,
+	WHITE_B3 = SQ_B3,
+	WHITE_C3 = SQ_C3,
+	WHITE_D3 = SQ_D3,
+	WHITE_E3 = SQ_E3,
+	WHITE_F3 = SQ_F3,
+	WHITE_G3 = SQ_G3,
+	WHITE_H3 = SQ_H3,
 };
 
 enum class Phase
@@ -208,7 +222,7 @@ inline constexpr bool T ## Check (T const& d) { return true; }
 #endif
 
 #define ENABLE_MIRROR_OPERATOR_ON(T, MAX) \
-inline T& operator~(T& d) { return d = T((int) MAX - 1 - (int) d); }
+inline constexpr T operator~(T d) { return T((int) MAX - 1 - (int) d); }
 
 ENABLE_BASE_OPERATORS_ON(Direction)
 
@@ -258,4 +272,17 @@ inline Square getEnPassantPawnSquare(EnPassantPawn pawn) {
 
 inline EnPassantPawn square2EnPassant(Square sq) {
 	return EnPassantPawn((int) sq);
+}
+
+inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
+	static std::shared_ptr<PieceType> piece_types[] = {
+		std::make_shared<EmptyTile>(),
+		std::make_shared<Pawn>(),
+		std::make_shared<King>(),
+		std::make_shared<Queen>(),
+		std::make_shared<Bishop>(),
+		std::make_shared<Knight>(),
+		std::make_shared<Rook>()
+	};
+	return piece_types[(int) id];
 }

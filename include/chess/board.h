@@ -4,8 +4,6 @@
 
 #include "types.h"
 
-enum Square;
-
 class Board
 {
 public:

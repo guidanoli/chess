@@ -10,7 +10,7 @@ Move::Move(Square origin, Square dest) :
 
 bool Move::isValid(Game const& game) const
 {
-	if (!SquareCheck(origin) || !SquareCheck(dest) || origin != dest)
+	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
 
 	auto const& moved_piece = game.getBoard()[origin];
@@ -20,14 +20,14 @@ bool Move::isValid(Game const& game) const
 
 	auto const& captured_piece = game.getBoard()[dest];
 
-	if (captured_piece.getType() != PieceTypeId::NONE &&
+	if (*captured_piece.getType() != PieceTypeId::NONE &&
 		captured_piece.getColour() == game.getTurn())
 		return false;
 
-	if (captured_piece.getType() == PieceTypeId::KING)
+	if (*captured_piece.getType() == PieceTypeId::KING)
 		return false;
 
-	return moved_piece.getType().canApply(game, *this);
+	return moved_piece.getType()->canApply(game, *this);
 }
 
 Square Move::getOrigin() const
@@ -47,34 +47,35 @@ void Move::operator()(Game& game) const
 	auto& destpiece = board[dest];
 	
 	destpiece = origpiece;
-	origpiece.setType(EmptyTile {});
+	origpiece.setType(std::make_shared<EmptyTile>());
 
-	destpiece.getType().afterApplied(game, *this);
+	destpiece.getType()->afterApplied(game, *this);
 }
 
 bool Pawn::canApply(Game const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
-	Direction dir = dest - orig;
+	Direction white_dir = dest - orig;
+	auto white_orig = orig;
 	auto const& origpiece = g.getBoard()[orig];
 	auto const& destpiece = g.getBoard()[dest];
 
 	if (origpiece.getColour() == Colour::BLACK) {
-		orig = ~orig;
-		dest = ~dest;
-		dir = -dir;
+		white_orig = ~white_orig;
+		white_dir = -white_dir;
 	}
 
 	auto enpassant = g.getEnPassantPawn();
 	auto enpassant_sq = getEnPassantPawnSquare(enpassant);
 
-	if (destpiece.getType() == PieceTypeId::NONE || enpassant_sq == dest) {
-		return (getSquareRank(orig) == RK_2 && dir == DIR_NORTH * 2) ||
-			   dir == DIR_NORTH;
+	if (*destpiece.getType() == PieceTypeId::NONE && enpassant_sq != dest) {
+		return (getSquareRank(white_orig) == RK_2 &&
+			    white_dir == DIR_NORTH * 2) ||
+			   white_dir == DIR_NORTH;
 	} else {
-		return dir == DIR_NORTHEAST ||
-			   dir == DIR_NORTHWEST;
+		return white_dir == DIR_NORTHEAST ||
+			   white_dir == DIR_NORTHWEST;
 	}
 }
 
@@ -138,18 +139,22 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 			if (orig_rank == RK_8 ||
 				orig_file == FL_A)
 				return false;
+			break;
 		case DIR_NORTHEAST:
 			if (orig_rank == RK_8 ||
 				orig_file == FL_H)
 				return false;
+			break;
 		case DIR_SOUTHWEST:
 			if (orig_rank == RK_1 ||
 				orig_file == FL_A)
 				return false;
+			break;
 		case DIR_SOUTHEAST:
 			if (orig_rank == RK_1 ||
 				orig_file == FL_H)
 				return false;
+			break;
 		default:
 			// Invalid direction
 			return false;
@@ -163,7 +168,7 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (g.getBoard()[orig].getType() != PieceTypeId::NONE)
+		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
 			return false;
 
 		// Update original square's rank and file
@@ -203,15 +208,19 @@ bool Rook::canApply(Game const& g, Move const& m) const
 		case DIR_NORTH:
 			if (orig_rank == RK_8)
 				return false;
+			break;
 		case DIR_SOUTH:
 			if (orig_rank == RK_1)
 				return false;
+			break;
 		case DIR_WEST:
 			if (orig_file == FL_A)
 				return false;
+			break;
 		case DIR_EAST:
 			if (orig_file == FL_H)
 				return false;
+			break;
 		default:
 			// Invalid direction
 			return false;
@@ -225,7 +234,7 @@ bool Rook::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (g.getBoard()[orig].getType() != PieceTypeId::NONE)
+		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
 			return false;
 
 		// Update original square's rank and file
@@ -253,10 +262,10 @@ void Pawn::afterApplied(Game& g, Move const& m) const
 			if (enpassant_sq == m.getDestination()) {
 				Square current_pawn_sq = enpassant_sq;
 				if (getSquareRank(enpassant_sq) == RK_3)
-					current_pawn_sq += DIR_SOUTH; // White pawn
+					current_pawn_sq += DIR_NORTH; // White pawn
 				else
-					current_pawn_sq += DIR_NORTH; // Black pawn
-				g.getBoard()[current_pawn_sq].setType(EmptyTile {});
+					current_pawn_sq += DIR_SOUTH; // Black pawn
+				g.getBoard()[current_pawn_sq].setType(std::make_shared<EmptyTile>());
 			}
 		}
 	}

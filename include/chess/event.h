@@ -8,7 +8,7 @@ enum class Colour;
 class Event
 {
 public:
-	virtual ~Event() = 0;
+	virtual ~Event() {};
 
 	// Check if event is valid and can be
 	// safely applied to game state
@@ -18,7 +18,7 @@ public:
 	virtual void operator()(Game& game) const = 0;
 };
 
-class Move : Event
+class Move : public Event
 {
 public:
 	Move(Square origin, Square dest);
@@ -32,7 +32,7 @@ private:
 	Square origin, dest;
 };
 
-class Promotion : Event
+class Promotion : public Event
 {
 	bool isValid(Game const& game) const override;
 	void operator()(Game& game) const override;
