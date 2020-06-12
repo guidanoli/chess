@@ -193,7 +193,9 @@ enum class EnPassantPawn
 enum class Phase
 {
 	RUNNING,
-	ENDED
+	WHITE_WON,
+	BLACK_WON,
+	MAX
 };
 
 // Macros for defining extra base operations on enumerations
@@ -230,6 +232,7 @@ ENABLE_VALIDITY_CHECK(File, FL_CNT)
 ENABLE_VALIDITY_CHECK(Rank, RK_CNT)
 ENABLE_VALIDITY_CHECK(Colour, Colour::MAX)
 ENABLE_VALIDITY_CHECK(PieceTypeId, PieceTypeId::MAX)
+ENABLE_VALIDITY_CHECK(Phase, Phase::MAX)
 
 ENABLE_MIRROR_OPERATOR_ON(Square, SQ_CNT)
 ENABLE_MIRROR_OPERATOR_ON(File, FL_CNT)

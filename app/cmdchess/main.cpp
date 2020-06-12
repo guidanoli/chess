@@ -7,6 +7,11 @@
 
 using namespace std;
 
+class CmdGameListener : public GameListener
+{
+	PieceTypeId promotePawn(Game const& game, Square pawn) override;
+};
+
 void print_turn(Game const& game)
 {
 	cout << "It's the turn of the "
@@ -98,8 +103,18 @@ void load_game(Game& g) {
 	}
 }
 
+PieceTypeId CmdGameListener::promotePawn(Game const& game, Square pawn)
+{
+	cout << "You may promote your pawn to a new type" << endl;
+	auto piece_opt = maybe_get_piece_type_id();
+	if (piece_opt)
+		return *piece_opt;
+	else
+		return PieceTypeId::QUEEN;
+}
+
 int play(int argc, char** argv) {
-	Game g;
+	auto g = Game(std::make_shared<CmdGameListener>());
 	while (true) {
 		g.pretty();
 		print_turn(g);
@@ -132,12 +147,18 @@ int play(int argc, char** argv) {
 		}
 	}
 end:
+	const auto phase = g.getPhase();
+	if (phase == Phase::WHITE_WON)
+		cout << "White won!" << endl;
+	else if (phase == Phase::BLACK_WON)
+		cout << "Black won!" << endl;
+
 	return 0;
 }
 
 int create_game_state(int argc, char** argv)
 {
-	Game g;
+	auto g = Game(std::make_shared<CmdGameListener>());
 	int opt;
 	while(true) {
 		g.pretty();

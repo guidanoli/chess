@@ -3,19 +3,29 @@
 #include <fstream>
 #include <vector>
 #include <functional>
+#include <memory>
 
 #include "types.h"
 #include "board.h"
 
 class Event;
 
+class GameListener
+{
+public:
+	virtual ~GameListener() {}
+	virtual PieceTypeId promotePawn(Game const& game, Square pawn) = 0;
+};
+
 class Game
 {
 public:
 	// Initialize a game
-	Game();
+	Game(std::shared_ptr<GameListener> listener);
 	// Copy game state
 	Game(Game const& game);
+	// Set new listener
+	void setListener(std::shared_ptr<GameListener> listener);
 	// Update game state with event
 	bool update(Event* e);
 	// Get board
@@ -40,18 +50,14 @@ private:
 	Square getKingSquare(Colour c) const;
 	bool wouldEventCauseCheck(Event* e) const;
 	bool canUpdate(Event* e) const;
-	bool canUpdateCheck(Move* m) const;
 	void lookForCheckmate();
+	void lookForPromotion();
 	bool inCheck(Colour c) const;
-
-	// Simulates on a copy
-	template<typename Return>
-	Return simulate(std::function<Return(Game&)> cb) const {
-		return cb(Game(*this));
-	}
+	bool simulate(std::function<bool(Game&)> cb) const;
 private:
 	Board m_board;
 	Colour m_turn;
 	EnPassantPawn m_enpassant_pawn;
+	std::shared_ptr<GameListener> m_listener;
 	Phase m_phase;
 };

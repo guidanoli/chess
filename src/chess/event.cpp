@@ -149,38 +149,20 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 	else if (dest_rank < orig_rank)
 		dir += DIR_SOUTH;
 	
+	if (dir != DIR_NORTHWEST &&
+		dir != DIR_SOUTHWEST &&
+		dir != DIR_NORTHEAST &&
+		dir != DIR_SOUTHEAST)
+		return false;
+
 	while (true) {
 		
-		// Check if, if followed a diagonal,
-		// would the piece fall off the board.
-		switch (dir) {
-		case DIR_NORTHWEST:
-			if (orig_rank == RK_8 ||
-				orig_file == FL_A)
-				return false;
-			break;
-		case DIR_NORTHEAST:
-			if (orig_rank == RK_8 ||
-				orig_file == FL_H)
-				return false;
-			break;
-		case DIR_SOUTHWEST:
-			if (orig_rank == RK_1 ||
-				orig_file == FL_A)
-				return false;
-			break;
-		case DIR_SOUTHEAST:
-			if (orig_rank == RK_1 ||
-				orig_file == FL_H)
-				return false;
-			break;
-		default:
-			// Invalid direction
-			return false;
-		}
-
 		// Goes one move further in the direction
 		orig += dir;
+
+		// Got out of the board
+		if (!SquareCheck(orig))
+			return false;
 
 		// If has reached the destination, it is a diagonal
 		if (orig == dest)
@@ -219,34 +201,20 @@ bool Rook::canApply(Game const& g, Move const& m) const
 	else if (dest_rank < orig_rank)
 		dir += DIR_SOUTH;
 
-	while (true) {
+	if (dir != DIR_NORTH &&
+		dir != DIR_SOUTH &&
+		dir != DIR_WEST &&
+		dir != DIR_EAST)
+		return false;
 
-		// Check if, if followed a line,
-		// would the piece fall off the board.
-		switch (dir) {
-		case DIR_NORTH:
-			if (orig_rank == RK_8)
-				return false;
-			break;
-		case DIR_SOUTH:
-			if (orig_rank == RK_1)
-				return false;
-			break;
-		case DIR_WEST:
-			if (orig_file == FL_A)
-				return false;
-			break;
-		case DIR_EAST:
-			if (orig_file == FL_H)
-				return false;
-			break;
-		default:
-			// Invalid direction
-			return false;
-		}
+	while (true) {
 
 		// Goes one move further in the direction
 		orig += dir;
+
+		// Got out of the board
+		if (!SquareCheck(orig))
+			return false;
 
 		// If has reached the destination, it is a line
 		if (orig == dest)
@@ -287,52 +255,12 @@ bool Queen::canApply(Game const& g, Move const& m) const
 
 	while (true) {
 
-		// Check if, if followed a line,
-		// would the piece fall off the board.
-		switch (dir) {
-		case DIR_NORTH:
-			if (orig_rank == RK_8)
-				return false;
-			break;
-		case DIR_SOUTH:
-			if (orig_rank == RK_1)
-				return false;
-			break;
-		case DIR_WEST:
-			if (orig_file == FL_A)
-				return false;
-			break;
-		case DIR_EAST:
-			if (orig_file == FL_H)
-				return false;
-			break;
-			case DIR_NORTHWEST:
-			if (orig_rank == RK_8 ||
-				orig_file == FL_A)
-				return false;
-			break;
-		case DIR_NORTHEAST:
-			if (orig_rank == RK_8 ||
-				orig_file == FL_H)
-				return false;
-			break;
-		case DIR_SOUTHWEST:
-			if (orig_rank == RK_1 ||
-				orig_file == FL_A)
-				return false;
-			break;
-		case DIR_SOUTHEAST:
-			if (orig_rank == RK_1 ||
-				orig_file == FL_H)
-				return false;
-			break;
-		default:
-			// Invalid direction
-			return false;
-		}
-
 		// Goes one move further in the direction
 		orig += dir;
+
+		// Got out of the board
+		if (!SquareCheck(orig))
+			return false;
 
 		// If has reached the destination, it is a line
 		if (orig == dest)
