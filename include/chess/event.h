@@ -1,9 +1,11 @@
 #pragma once
 
+#include <memory>
+
 class Game;
 enum Square;
-enum class PieceTypeId;
 enum class Colour;
+class PieceType;
 
 class Event
 {
@@ -12,10 +14,10 @@ public:
 
 	// Check if event is valid and can be
 	// safely applied to game state
-	virtual bool isValid(Game const& game) const = 0;
+	virtual bool isValid(Game const& game) = 0;
 
 	// Apply event to game state
-	virtual void operator()(Game& game) const = 0;
+	virtual void apply(Game& game) = 0;
 };
 
 class Move : public Event
@@ -26,20 +28,9 @@ public:
 	Square getOrigin() const;
 	Square getDestination() const;
 
-	bool isValid(Game const& game) const override;
-	void operator()(Game& game) const override;
+	bool isValid(Game const& game) override;
+	bool isValidCheck(Game const& game);
+	void apply(Game& game) override;
 private:
 	Square origin, dest;
-};
-
-class Promotion : public Event
-{
-	bool isValid(Game const& game) const override;
-	void operator()(Game& game) const override;
-};
-
-class Castling : Event
-{
-	bool isValid(Game const& game) const override;
-	void operator()(Game& game) const override;
 };

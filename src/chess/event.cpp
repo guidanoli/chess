@@ -8,7 +8,7 @@ Move::Move(Square origin, Square dest) :
 	origin(origin), dest(dest)
 {}
 
-bool Move::isValid(Game const& game) const
+bool Move::isValid(Game const& game)
 {
 	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
@@ -30,6 +30,25 @@ bool Move::isValid(Game const& game) const
 	return moved_piece.getType()->canApply(game, *this);
 }
 
+bool Move::isValidCheck(Game const& game)
+{
+	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
+		return false;
+
+	auto const& moved_piece = game.getBoard()[origin];
+
+	if (moved_piece.getColour() != game.getTurn())
+		return false;
+
+	auto const& captured_piece = game.getBoard()[dest];
+
+	if (*captured_piece.getType() != PieceTypeId::KING ||
+		captured_piece.getColour() == game.getTurn())
+		return false;
+
+	return moved_piece.getType()->canApply(game, *this);
+}
+
 Square Move::getOrigin() const
 {
 	return origin;
@@ -40,14 +59,14 @@ Square Move::getDestination() const
 	return dest;
 }
 
-void Move::operator()(Game& game) const
+void Move::apply(Game& game)
 {
 	auto& board = game.getBoard();
 	auto& origpiece = board[origin];
 	auto& destpiece = board[dest];
 	
 	destpiece = origpiece;
-	origpiece.setType(std::make_shared<EmptyTile>());
+	origpiece.clear();
 
 	destpiece.getType()->afterApplied(game, *this);
 }
@@ -245,7 +264,88 @@ bool Rook::canApply(Game const& g, Move const& m) const
 
 bool Queen::canApply(Game const& g, Move const& m) const
 {
-	return Rook().canApply(g, m) || Bishop().canApply(g, m);
+	auto orig = m.getOrigin();
+	auto dest = m.getDestination();
+
+	auto orig_rank = getSquareRank(orig);
+	auto orig_file = getSquareFile(orig);
+
+	auto dest_rank = getSquareRank(dest);
+	auto dest_file = getSquareFile(dest);
+
+	Direction dir = DIR_NONE;
+
+	if (dest_file > orig_file)
+		dir += DIR_EAST;
+	else if (dest_file < orig_file)
+		dir += DIR_WEST;
+
+	if (dest_rank > orig_rank)
+		dir += DIR_NORTH;
+	else if (dest_rank < orig_rank)
+		dir += DIR_SOUTH;
+
+	while (true) {
+
+		// Check if, if followed a line,
+		// would the piece fall off the board.
+		switch (dir) {
+		case DIR_NORTH:
+			if (orig_rank == RK_8)
+				return false;
+			break;
+		case DIR_SOUTH:
+			if (orig_rank == RK_1)
+				return false;
+			break;
+		case DIR_WEST:
+			if (orig_file == FL_A)
+				return false;
+			break;
+		case DIR_EAST:
+			if (orig_file == FL_H)
+				return false;
+			break;
+			case DIR_NORTHWEST:
+			if (orig_rank == RK_8 ||
+				orig_file == FL_A)
+				return false;
+			break;
+		case DIR_NORTHEAST:
+			if (orig_rank == RK_8 ||
+				orig_file == FL_H)
+				return false;
+			break;
+		case DIR_SOUTHWEST:
+			if (orig_rank == RK_1 ||
+				orig_file == FL_A)
+				return false;
+			break;
+		case DIR_SOUTHEAST:
+			if (orig_rank == RK_1 ||
+				orig_file == FL_H)
+				return false;
+			break;
+		default:
+			// Invalid direction
+			return false;
+		}
+
+		// Goes one move further in the direction
+		orig += dir;
+
+		// If has reached the destination, it is a line
+		if (orig == dest)
+			return true;
+
+		// If hasn't reached yet, there must be no piece there!
+		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
+			return false;
+
+		// Update original square's rank and file
+		auto orig_rank = getSquareRank(orig);
+		auto orig_file = getSquareFile(orig);
+	}
 }
 
 void Pawn::afterApplied(Game& g, Move const& m) const
@@ -265,7 +365,7 @@ void Pawn::afterApplied(Game& g, Move const& m) const
 					current_pawn_sq += DIR_NORTH; // White pawn
 				else
 					current_pawn_sq += DIR_SOUTH; // Black pawn
-				g.getBoard()[current_pawn_sq].setType(std::make_shared<EmptyTile>());
+				g.getBoard()[current_pawn_sq].clear();
 			}
 		}
 	}

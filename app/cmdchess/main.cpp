@@ -1,66 +1,11 @@
 ﻿#include <iostream>
 #include <optional>
+#include <cstdlib>
 
 #include "game.h"
 #include "event.h"
 
 using namespace std;
-
-void print_piece(Piece p) {
-	char c = p.getColour() == Colour::WHITE ? 0 : ('A' - 'a');
-	switch (*p.getType()) {
-	case PieceTypeId::NONE:
-		cout << "_";
-		return;
-	case PieceTypeId::PAWN:
-		c += 'p';
-		break;
-	case PieceTypeId::KING:
-		c += 'k';
-		break;
-	case PieceTypeId::QUEEN:
-		c += 'q';
-		break;
-	case PieceTypeId::BISHOP:
-		c += 'b';
-		break;
-	case PieceTypeId::KNIGHT:
-		c += 'n';
-		break;
-	case PieceTypeId::ROOK:
-		c += 'r';
-		break;
-	default:
-		cout << "?";
-		return;
-	}
-	cout << c;
-}
-
-void print_chess_board(Board const& board)
-{
-	cout << "    ";
-	for (char fc = 'a'; fc <= 'h'; ++fc)
-		cout << fc << " ";
-	cout << endl << "   _";
-	for (char fc = 'a'; fc <= 'h'; ++fc)
-		cout << "__";
-	cout << endl;
-	for (Rank r = RK_8; r >= RK_1; --r) {
-		cout << r - RK_1 + 1 << " | ";
-		for (File f = FL_A; f <= FL_H; ++f) {
-			Square sq = getSquare(r, f);
-			Piece p = board[sq];
-			print_piece(p);
-			cout << " ";
-		}
-		cout << "|" << endl;
-	}
-	cout << "   ";
-	for (char fc = 'a'; fc <= 'h'; ++fc)
-		cout << "--";
-	cout << "-" << endl;
-}
 
 void print_turn(Game const& game)
 {
@@ -69,40 +14,107 @@ void print_turn(Game const& game)
 		 << " pieces" << endl;
 }
 
-std::optional<Move> getMove()
+optional<Square> maybe_get_square()
 {
-	int initial_r, final_r;
-	char initial_f, final_f;
-	cout << "Piece at... ";
-	cin >> initial_f >> initial_r;
-	if (!FileCheck(File(initial_f - 'a')) ||
-		!RankCheck(Rank(initial_r - 1)))
-		return std::nullopt;
-	cout << "To... ";
-	cin >> final_f >> final_r;
-	if (!FileCheck(File(final_f - 'a')) ||
-		!RankCheck(Rank(final_r - 1)))
-		return std::nullopt;
-	Square ini = getSquare(Rank(initial_r - 1), File(initial_f - 'a'));
-	Square fin = getSquare(Rank(final_r - 1), File(final_f - 'a'));
-	return Move(ini, fin);
+	int r_int;
+	char f_char;
+	cin >> f_char >> r_int;
+	auto f = File(f_char - 'a');
+	auto r = Rank(r_int - 1);
+	if (!FileCheck(f) || !RankCheck(r))
+		return nullopt;
+	return getSquare(r, f);
 }
 
-int main(int argc, char** argv)
+optional<Move> maybe_get_move()
 {
+	cout << "Piece at... ";
+	auto ini = maybe_get_square();
+	if (!ini)
+		return nullopt;
+	cout << "To... ";
+	auto fin = maybe_get_square();
+	if (!fin)
+		return nullopt;
+	return Move(*ini, *fin);
+}
+
+optional<PieceTypeId> maybe_get_piece_type_id() {
+	int opt;
+	cout << "Piece type:" << endl;
+	cout << "[0] Empty" << endl;
+	cout << "[1] Pawn" << endl;
+	cout << "[2] King" << endl;
+	cout << "[3] Queen" << endl;
+	cout << "[4] Bishop" << endl;
+	cout << "[5] Knight" << endl;
+	cout << "[6] Rook" << endl;
+	cout << ">>> ";
+	cin >> opt;
+	auto piece_type_id = PieceTypeId(opt);
+	if (!PieceTypeIdCheck(piece_type_id))
+		return nullopt;
+	return piece_type_id;
+}
+
+optional<Colour> maybe_get_colour() {
+	int opt;
+	cout << "Colour:" << endl;
+	cout << "[0] White" << endl;
+	cout << "[1] Black" << endl;
+	cout << ">>> ";
+	cin >> opt;
+	auto colour = Colour(opt);
+	if (!ColourCheck(colour))
+		return nullopt;
+	return colour;
+}
+
+void save_game(Game const& g) {
+	string ofile;
+	cout << "file = ";
+	cin >> ofile;
+	ofstream fs(ofile);
+	fs << g;
+	if (fs)
+		cout << "Saved!" << endl;
+	else
+		cout << "Error!" << endl;
+}
+
+void load_game(Game& g) {
+	string ifile;
+	cout << "file = ";
+	cin >> ifile;
+	ifstream fs(ifile);
+	fs >> g;
+	if (fs) {
+		cout << "Loaded!" << endl;
+		g.pretty();
+		print_turn(g);
+	} else {
+		cout << "Error!" << endl;
+		exit(1);
+	}
+}
+
+int play(int argc, char** argv) {
 	Game g;
-	while (g.getPhase() == Phase::RUNNING) {
-		print_chess_board(g.getBoard());
+	while (true) {
+		g.pretty();
 		print_turn(g);
 		while (true) {
 			int opt;
+			if (g.getPhase() != Phase::RUNNING)
+				goto end;
+			cout << "Choose an action:" << endl;
 			cout << "[0] Move" << endl;
 			cout << "[8] Load" << endl;
 			cout << "[9] Save" << endl;
 			cout << ">>> ";
 			cin >> opt;
 			if (opt == 0) {
-				auto move_opt = getMove();
+				auto move_opt = maybe_get_move();
 				if (move_opt) {
 					auto move = *move_opt;
 					if (g.update(&move))
@@ -113,28 +125,86 @@ int main(int argc, char** argv)
 					cout << "Illegal input" << endl;
 				}
 			} else if (opt == 8) {
-				string ifile;
-				cout << "file = ";
-				cin >> ifile;
-				std::ifstream fs(ifile);
-				fs >> g;
-				if (fs) {
-					cout << "Loaded!" << endl;
-					print_chess_board(g.getBoard());
-					print_turn(g);
-				} else {
-					cout << "Error!" << endl;
-					return 1;
-				}
+				load_game(g);
 			} else if (opt == 9) {
-				std::ofstream fs("save.dat");
-				fs << g;
-				if (fs)
-					cout << "Saved!" << endl;
-				else
-					cout << "Error!" << endl;
+				save_game(g);
 			}
 		}
 	}
+end:
 	return 0;
+}
+
+int create_game_state(int argc, char** argv)
+{
+	Game g;
+	int opt;
+	while(true) {
+		g.pretty();
+		cout << "Choose an action:" << endl;
+		cout << "[0] Exit" << endl;
+		cout << "[1] Save" << endl;
+		cout << "[2] Load" << endl;
+		cout << "[3] Edit square" << endl;
+		cout << "[4] Next turn" << endl;
+		cout << "[5] Clear board" << endl;
+		cout << ">>> ";
+		cin >> opt;
+		if (opt == 0) {
+			return 0;
+		} else if (opt == 1) {
+			save_game(g);
+		} else if (opt == 2) {
+			load_game(g);
+		} else if (opt == 3) {
+			cout << "square = ";
+			auto sq = maybe_get_square();
+			if (sq) {
+				auto piece_type_id_opt = maybe_get_piece_type_id();
+				if (!piece_type_id_opt) {
+					cout << "Illegal piece type!" << endl;
+					continue;
+				}
+				if (*piece_type_id_opt == PieceTypeId::NONE) {
+					g.getBoard()[*sq].clear();
+					continue;
+				}
+				auto colour_opt = maybe_get_colour();
+				if (!colour_opt) {
+					cout << "Illegal colour!" << endl;
+					continue;
+				}
+				auto piece_type = getPieceTypeById(*piece_type_id_opt);
+				g.getBoard()[*sq] = Piece(piece_type, *colour_opt);
+				g.setEnPassantPawn(EnPassantPawn::NONE);
+			} else {
+				cout << "Illegal square!" << endl;
+			}
+		} else if (opt == 4) {
+			g.nextTurn();
+			print_turn(g);
+		} else if (opt == 5) {
+			auto& board = g.getBoard();
+			for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
+				board[sq].clear();
+		} else {
+			return 1;
+		}
+	}
+}
+
+int main(int argc, char** argv)
+{
+	int opt;
+	cout << "Choose a subprogram:" << endl;
+	cout << "[0] Play" << endl;
+	cout << "[1] Create game state" << endl;
+	cout << ">>> ";
+	cin >> opt;
+	if (opt == 0)
+		return play(argc, argv);
+	else if (opt == 1)
+		return create_game_state(argc, argv);
+	else
+		return 1;
 }

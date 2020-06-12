@@ -46,13 +46,13 @@ enum Direction : int
 
 enum class PieceTypeId
 {
-	NONE,
-	PAWN,
-	KING,
-	QUEEN,
-	BISHOP,
-	KNIGHT,
-	ROOK,
+	NONE = 0,
+	PAWN = 1,
+	KING = 2,
+	QUEEN = 3,
+	BISHOP = 4,
+	KNIGHT = 5,
+	ROOK = 6,
 	MAX
 };
 
@@ -60,6 +60,7 @@ enum class Colour
 {
 	WHITE = 0,
 	BLACK = 1,
+	MAX
 };
 
 class Game;
@@ -127,8 +128,7 @@ public:
 class Piece
 {
 public:
-	Piece() :
-		type(std::make_shared<EmptyTile>()), c(Colour::WHITE) {}
+	Piece() : c(Colour::WHITE) { clear(); }
 	Piece(Piece const& p) :
 		type(p.type), c(p.c) {}
 	Piece(std::shared_ptr<PieceType> type, Colour c) :
@@ -138,6 +138,7 @@ public:
 	Colour getColour() const { return c; }
 	void setType(std::shared_ptr<PieceType> t) { type = t; }
 	void setColour(Colour cl) { c = cl; }
+	void clear();
 
 	Piece& operator=(Piece& p) {
 		type = p.type;
@@ -211,15 +212,9 @@ inline T& operator--(T& d) { return d = T(int(d) - 1); }
 
 // End of external code
 
-#ifdef _DEBUG
 // Check if enum value is valid
 #define ENABLE_VALIDITY_CHECK(T, MAX) \
-inline constexpr bool T ## Check (T const& d) { return d >= 0 && d < MAX; }
-#else
-// Assume every value is valid
-#define ENABLE_VALIDITY_CHECK(T, MAX) \
-inline constexpr bool T ## Check (T const& d) { return true; }
-#endif
+inline constexpr bool T ## Check (T const& d) { return (int) d >= 0 && (int) d < (int) MAX; }
 
 #define ENABLE_MIRROR_OPERATOR_ON(T, MAX) \
 inline constexpr T operator~(T d) { return T((int) MAX - 1 - (int) d); }
@@ -233,6 +228,8 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 ENABLE_VALIDITY_CHECK(Square, SQ_CNT);
 ENABLE_VALIDITY_CHECK(File, FL_CNT)
 ENABLE_VALIDITY_CHECK(Rank, RK_CNT)
+ENABLE_VALIDITY_CHECK(Colour, Colour::MAX)
+ENABLE_VALIDITY_CHECK(PieceTypeId, PieceTypeId::MAX)
 
 ENABLE_MIRROR_OPERATOR_ON(Square, SQ_CNT)
 ENABLE_MIRROR_OPERATOR_ON(File, FL_CNT)
@@ -286,3 +283,5 @@ inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
 	};
 	return piece_types[(int) id];
 }
+
+inline void Piece::clear() { type = getPieceTypeById(PieceTypeId::NONE); }

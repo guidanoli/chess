@@ -34,6 +34,21 @@ Board::Board()
 		R_MIRROR(m_matrix, RK_2, f, PieceTypeId::PAWN);
 }
 
+std::optional<Square> Board::find(PieceTypeId piece_type_id,
+                                  Colour colour) const
+{
+	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
+		auto& p = (*this)[square];
+		if (*p.getType() == piece_type_id && p.getColour() == colour)
+			return square;
+	}
+	return std::nullopt;
+}
+
+Board::Board(Board const& board) :
+	m_matrix(board.m_matrix)
+{}
+
 Piece& Board::operator[](Square sq)
 {
 	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
