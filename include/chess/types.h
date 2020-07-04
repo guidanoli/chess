@@ -201,25 +201,25 @@ enum class Phase
 // Macros for defining extra base operations on enumerations
 // From Stockfish source code
 
-#define ENABLE_BASE_OPERATORS_ON(T)                                \
-constexpr T operator+(T d1, T d2) { return T(int(d1) + int(d2)); } \
-constexpr T operator-(T d1, T d2) { return T(int(d1) - int(d2)); } \
-constexpr T operator-(T d) { return T(-int(d)); }                  \
-inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }         \
+#define ENABLE_BASE_OPERATORS_ON(T)																			\
+constexpr T operator+(T d1, T d2) { return static_cast<T>(static_cast<int>(d1) + static_cast<int>(d2)); }	\
+constexpr T operator-(T d1, T d2) { return static_cast<T>(static_cast<int>(d1) - static_cast<int>(d2)); }	\
+constexpr T operator-(T d) { return static_cast<T>(-static_cast<int>(d)); }									\
+inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }													\
 inline T& operator-=(T& d1, T d2) { return d1 = d1 - d2; }
 
-#define ENABLE_INCR_OPERATORS_ON(T)                                \
-inline T& operator++(T& d) { return d = T(int(d) + 1); }           \
-inline T& operator--(T& d) { return d = T(int(d) - 1); }
+#define ENABLE_INCR_OPERATORS_ON(T)													\
+inline T& operator++(T& d) { return d = static_cast<T>(static_cast<int>(d) + 1); }	\
+inline T& operator--(T& d) { return d = static_cast<T>(static_cast<int>(d) - 1); }
 
 // End of external code
 
 // Check if enum value is valid
 #define ENABLE_VALIDITY_CHECK(T, MAX) \
-inline constexpr bool T ## Check (T const& d) { return (int) d >= 0 && (int) d < (int) MAX; }
+inline constexpr bool T ## Check (T const& d) { return static_cast<int>(d) >= 0 && static_cast<int>(d) < static_cast<int>(MAX); }
 
 #define ENABLE_MIRROR_OPERATOR_ON(T, MAX) \
-inline constexpr T operator~(T d) { return T((int) MAX - 1 - (int) d); }
+inline constexpr T operator~(T d) { return static_cast<T>(static_cast<int>(MAX) - 1 - static_cast<int>(d)); }
 
 ENABLE_BASE_OPERATORS_ON(Direction)
 
@@ -242,36 +242,36 @@ ENABLE_MIRROR_OPERATOR_ON(Rank, RK_CNT)
 #undef ENABLE_INCR_OPERATORS_ON
 #undef ENABLE_MIRROR_OPERATOR_ON
 
-inline Rank getSquareRank(Square sq) { return Rank((int) sq >> 3); }
-inline File getSquareFile(Square sq) { return File((int) sq & 0b111); }
-inline Square getSquare(Rank r, File f) { return Square((int) r << 3 | (int) f); }
+inline Rank getSquareRank(Square sq) { return static_cast<Rank>(static_cast<int>(sq) >> 3); }
+inline File getSquareFile(Square sq) { return static_cast<File>(static_cast<int>(sq) & 0b111); }
+inline Square getSquare(Rank r, File f) { return static_cast<Square>(static_cast<int>(r) << 3 | static_cast<int>(f)); }
 
 inline Direction operator-(Square dest, Square origin) {
-	return Direction((int) dest - (int) origin);
+	return Direction(static_cast<int>(dest) - static_cast<int>(origin));
 }
 
 inline Square& operator+=(Square& sq, Direction dir) {
-	return sq = Square((int) sq + (int) dir);
+	return sq = Square(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
 inline Square operator+(Square sq, Direction dir) {
-	return Square((int) sq + (int) dir);
+	return Square(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
 inline Square& operator-=(Square& sq, Direction dir) {
-	return sq = Square((int) sq - (int) dir);
+	return sq = Square(static_cast<int>(sq) - static_cast<int>(dir));
 }
 
 inline Square operator-(Square sq, Direction dir) {
-	return Square((int) sq - (int) dir);
+	return Square(static_cast<int>(sq) - static_cast<int>(dir));
 }
 
 inline Square getEnPassantPawnSquare(EnPassantPawn pawn) {
-	return Square((int) pawn);
+	return Square(static_cast<int>(pawn));
 }
 
 inline EnPassantPawn square2EnPassant(Square sq) {
-	return EnPassantPawn((int) sq);
+	return EnPassantPawn(static_cast<int>(sq));
 }
 
 inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
@@ -284,7 +284,7 @@ inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
 		std::make_shared<Knight>(),
 		std::make_shared<Rook>()
 	};
-	return piece_types[(int) id];
+	return piece_types[static_cast<int>(id)];
 }
 
 inline void Piece::clear() { type = getPieceTypeById(PieceTypeId::NONE); }

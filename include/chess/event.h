@@ -5,8 +5,6 @@
 class Game;
 enum Square;
 enum class Colour;
-class PieceType;
-enum class PieceTypeId;
 
 class Event
 {

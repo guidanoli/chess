@@ -1,15 +1,36 @@
 ﻿#include <iostream>
 #include <optional>
 #include <cstdlib>
+#include <map>
 
 #include "game.h"
 #include "event.h"
 
 using namespace std;
 
+template<typename T> struct map_init_helper
+{
+	T& data;
+	map_init_helper(T& d) : data(d) {}
+	map_init_helper& operator() (typename T::key_type const& key,
+								 typename T::mapped_type const& value)
+	{
+		data[key] = value;
+		return *this;
+	}
+};
+
+template<typename T> map_init_helper<T> map_init(T& item)
+{
+	return map_init_helper<T>(item);
+}
+
+static map<GameError, string> error_message_map;
+
 class CmdGameListener : public GameListener
 {
 	PieceTypeId promotePawn(Game const& game, Square pawn) override;
+	void catchError(Game const& game, GameError error) override;
 };
 
 void print_turn(Game const& game)
@@ -113,6 +134,15 @@ PieceTypeId CmdGameListener::promotePawn(Game const& game, Square pawn)
 		return PieceTypeId::QUEEN;
 }
 
+void CmdGameListener::catchError(Game const& game, GameError error)
+{
+	auto error_message = error_message_map.find(error);
+	if (error_message == error_message_map.end())
+		cout << "Caught unknown error" << endl;
+	else
+		cout << "Error: " << error_message->second << endl;
+}
+
 int play(int argc, char** argv) {
 	auto g = Game(std::make_shared<CmdGameListener>());
 	while (true) {
@@ -214,8 +244,16 @@ int create_game_state(int argc, char** argv)
 	}
 }
 
+void init_error_message_map()
+{
+	map_init(error_message_map)
+		(GameError::ILLEGAL_PROMOTION, "Illegal promotion");
+}
+
 int main(int argc, char** argv)
 {
+	init_error_message_map();
+
 	int opt;
 	cout << "Choose a subprogram:" << endl;
 	cout << "[0] Play" << endl;

@@ -14,24 +14,28 @@ static void print_chess_board(Board const& board);
 class DummyGameListener : public GameListener
 {
 public:
-	PieceTypeId promotePawn(Game const& game, Square pawn) override {
-		return PieceTypeId::NONE;
-	}
+	PieceTypeId promotePawn(Game const& game, Square pawn) override;
+	void catchError(Game const& game, GameError err) override {};
 };
+
+PieceTypeId DummyGameListener::promotePawn(Game const& game, Square pawn)
+{
+	return PieceTypeId::QUEEN;
+}
 
 Game::Game(std::shared_ptr<GameListener> listener) :
 	m_turn(Colour::WHITE),
-	m_phase(Phase::RUNNING),
 	m_enpassant_pawn(EnPassantPawn::NONE),
-	m_listener(listener)
+	m_listener(listener),
+	m_phase(Phase::RUNNING)
 {}
 
 Game::Game(Game const& game) :
-	m_turn(game.m_turn),
-	m_phase(game.m_phase),
-	m_enpassant_pawn(game.m_enpassant_pawn),
 	m_board(game.m_board),
-	m_listener(game.m_listener)
+	m_turn(game.m_turn),
+	m_enpassant_pawn(game.m_enpassant_pawn),
+	m_listener(game.m_listener),
+	m_phase(game.m_phase)
 {}
 
 void Game::pretty() const
@@ -98,11 +102,22 @@ void Game::lookForPromotion()
 		Square sq = getSquare(last_rank, f);
 		auto& piece = m_board[sq];
 		if (*piece.getType() == PieceTypeId::PAWN) {
-			PieceTypeId new_type = m_listener->promotePawn(*this, sq);
-			if (new_type == PieceTypeId::NONE ||
-				new_type == PieceTypeId::PAWN ||
-				new_type == PieceTypeId::KING)
-				new_type = PieceTypeId::QUEEN;
+			PieceTypeId new_type;
+			while(true) {
+
+				new_type = m_listener->promotePawn(*this, sq);
+
+				if (new_type != PieceTypeId::NONE &&
+					new_type != PieceTypeId::PAWN &&
+					new_type != PieceTypeId::KING)
+				{
+					break;
+				}
+				else
+				{
+					m_listener->catchError(*this, GameError::ILLEGAL_PROMOTION);
+				}
+			}
 			piece.setType(getPieceTypeById(new_type));
 			return;
 		}

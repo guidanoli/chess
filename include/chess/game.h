@@ -10,11 +10,22 @@
 
 class Event;
 
+enum class GameError
+{
+	// Player tries to promote pawn to an illegal piece type
+	ILLEGAL_PROMOTION,
+};
+
 class GameListener
 {
 public:
 	virtual ~GameListener() {}
+	// Asks for a new piece type the pawn at the given square will promote to
+	// If the piece type is invalid (NONE, KING or PAWN), the routine will
+	// be called repeatedly, and an error message will be set.
 	virtual PieceTypeId promotePawn(Game const& game, Square pawn) = 0;
+	// Triggers an error alert that should be handled by the listener
+	virtual void catchError(Game const& game, GameError err) = 0;
 };
 
 class Game
