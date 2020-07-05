@@ -188,7 +188,7 @@ end:
 
 int create_game_state(int argc, char** argv)
 {
-	auto g = Game(std::make_shared<CmdGameListener>());
+	auto g = Game(std::make_shared<CmdGameListener>(), true);
 	int opt;
 	while(true) {
 		g.pretty();

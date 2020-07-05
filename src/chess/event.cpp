@@ -282,7 +282,7 @@ void Pawn::afterApplied(Game& g, Move const& m) const
 
 	if (dir == DIR_NORTH * 2 || dir == DIR_SOUTH * 2) {
 		Direction half_dir = Direction((int) dir / 2);
-		g.setEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
+		g.privateSetEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
 	} else {
 		EnPassantPawn enpassant = g.getEnPassantPawn();
 		if (enpassant != EnPassantPawn::NONE) {

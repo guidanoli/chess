@@ -23,7 +23,8 @@ PieceTypeId DummyGameListener::promotePawn(Game const& game, Square pawn)
 	return PieceTypeId::QUEEN;
 }
 
-Game::Game(std::shared_ptr<GameListener> listener) :
+Game::Game(std::shared_ptr<GameListener> listener, bool debug) :
+	m_debug(debug),
 	m_turn(Colour::WHITE),
 	m_enpassant_pawn(EnPassantPawn::NONE),
 	m_listener(listener),
@@ -31,6 +32,7 @@ Game::Game(std::shared_ptr<GameListener> listener) :
 {}
 
 Game::Game(Game const& game) :
+	m_debug(game.m_debug),
 	m_board(game.m_board),
 	m_turn(game.m_turn),
 	m_enpassant_pawn(game.m_enpassant_pawn),
@@ -46,6 +48,11 @@ void Game::pretty() const
 void Game::setListener(std::shared_ptr<GameListener> listener)
 {
 	m_listener = listener;
+}
+
+bool Game::isDebug() const
+{
+	return m_debug;
 }
 
 bool Game::inCheck(Colour c) const
@@ -84,11 +91,11 @@ bool Game::update(Event* e)
 	e->apply(*this);
 
 	if (ep_before == m_enpassant_pawn)
-		setEnPassantPawn(EnPassantPawn::NONE);
+		privateSetEnPassantPawn(EnPassantPawn::NONE);
 
 	lookForPromotion();
 
-	nextTurn();
+	privateNextTurn();
 
 	lookForCheckmate();
 
@@ -162,7 +169,7 @@ bool Game::wouldEventCauseCheck(Event* e) const
 	return simulate([e] (Game& g) {
 		e->apply(g);
 		auto turn = g.getTurn();
-		g.nextTurn();
+		g.privateNextTurn();
 		return g.inCheck(turn);
 	});
 }
@@ -175,6 +182,12 @@ bool Game::simulate(std::function<bool(Game&)> cb) const
 }
 
 void Game::nextTurn()
+{
+	if (m_debug)
+		privateNextTurn();
+}
+
+void Game::privateNextTurn()
 {
 	m_turn = Colour(1 - (int) m_turn);
 }
@@ -205,6 +218,12 @@ EnPassantPawn Game::getEnPassantPawn() const
 }
 
 void Game::setEnPassantPawn(EnPassantPawn pawn)
+{
+	if (m_debug)
+		privateSetEnPassantPawn(pawn);
+}
+
+void Game::privateSetEnPassantPawn(EnPassantPawn pawn)
 {
 	m_enpassant_pawn = pawn;
 }

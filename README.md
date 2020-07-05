@@ -10,7 +10,7 @@ a graphical implementation whose controls aren't dependable
 on the command line but in the graphical display window and
 interactions (mouse and keyboard).
 
-This projects is to be divided into the following stages:
+This project is to be divided into the following stages:
 
 - Describe in formal ways a chess game
 - Implement a generic chess game interface

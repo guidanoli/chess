@@ -1,5 +1,7 @@
 #include "board.h"
 
+#include <assert.h>
+
 #include "types.h"
 
 // Places a piece of type t in rank r and file f in matrix m
@@ -37,6 +39,8 @@ Board::Board()
 std::optional<Square> Board::find(PieceTypeId piece_type_id,
                                   Colour colour) const
 {
+	assert(PieceTypeIdCheck(piece_type_id));
+	assert(ColourCheck(colour));
 	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
 		auto& p = (*this)[square];
 		if (*p.getType() == piece_type_id && p.getColour() == colour)
@@ -51,10 +55,12 @@ Board::Board(Board const& board) :
 
 Piece& Board::operator[](Square sq)
 {
+	assert(SquareCheck(sq));
 	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
 }
 
 Piece const& Board::operator[](Square sq) const
 {
+	assert(SquareCheck(sq));
 	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
 }
