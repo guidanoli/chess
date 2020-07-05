@@ -26,5 +26,5 @@ public:
 	// Find piece in board
 	std::optional<Square> find(PieceTypeId piece_type_id, Colour colour) const;
 private:
-	std::array<std::array<Piece, 8>, 8> m_matrix;
+	Piece m_matrix[8][8];
 };

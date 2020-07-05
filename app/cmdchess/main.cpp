@@ -225,8 +225,11 @@ int create_game_state(int argc, char** argv)
 					cout << "Illegal colour!" << endl;
 					continue;
 				}
+				auto piece_colour = *colour_opt;
 				auto piece_type = getPieceTypeById(*piece_type_id_opt);
-				g.getBoard()[*sq] = Piece(piece_type, *colour_opt);
+				auto& board_piece = g.getBoard()[*sq];
+				board_piece.setType(piece_type);
+			       	board_piece.setColour(piece_colour);
 				g.setEnPassantPawn(EnPassantPawn::NONE);
 			} else {
 				cout << "Illegal square!" << endl;
