@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fstream>
+#include <iostream>
 #include <map>
 #include <vector>
 #include <functional>
@@ -82,10 +82,13 @@ public:
 
 	// Get game phase
 	Phase getPhase() const;
+
+	// Print board
+	void pretty() const;
 public:
 	// Serialize/Deserialize game state
-	friend std::ofstream& operator<<(std::ofstream& fs, Game const& g);
-	friend std::ifstream& operator>>(std::ifstream& fs, Game& g);
+	friend std::ostream& operator<<(std::ostream& fs, Game const& g);
+	friend std::istream& operator>>(std::istream& fs, Game& g);
 
 	// Check whether square was altered
 	bool wasSquareAltered(Square sq) const;
@@ -98,9 +101,6 @@ public:
 
 	// Set en passant pawn (debug)
 	void setEnPassantPawn(EnPassantPawn pawn);
-
-	// Print board (debug)
-	void pretty() const;
 
 	// Set altered square (debug)
 	void setSquareAltered(Square sq, bool altered);

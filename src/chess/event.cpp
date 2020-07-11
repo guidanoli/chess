@@ -20,11 +20,11 @@ bool Move::isValid(Game const& game)
 
 	auto const& captured_piece = game.getBoard()[dest];
 
-	if (*captured_piece.getType() != PieceTypeId::NONE &&
+	if (!captured_piece.isClear() &&
 		captured_piece.getColour() == game.getTurn())
 		return false;
 
-	if (*captured_piece.getType() == PieceTypeId::KING)
+	if (captured_piece.getType()->getId() == PieceTypeId::KING)
 		return false;
 
 	return moved_piece.getType()->canApply(game, *this);
@@ -42,7 +42,7 @@ bool Move::isValidCheck(Game const& game)
 
 	auto const& captured_piece = game.getBoard()[dest];
 
-	if (*captured_piece.getType() != PieceTypeId::KING ||
+	if (captured_piece.getType()->getId() != PieceTypeId::KING ||
 		captured_piece.getColour() == game.getTurn())
 		return false;
 
@@ -91,7 +91,7 @@ bool Pawn::canApply(Game const& g, Move const& m) const
 	auto enpassant = g.getEnPassantPawn();
 	auto enpassant_sq = getEnPassantPawnSquare(enpassant);
 
-	if (*destpiece.getType() == PieceTypeId::NONE && enpassant_sq != dest) {
+	if (destpiece.isClear() && enpassant_sq != dest) {
 		return (getSquareRank(white_orig) == RK_2 &&
 			    white_dir == DIR_NORTH * 2) ||
 			   white_dir == DIR_NORTH;
@@ -172,7 +172,7 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
+		if (!g.getBoard()[orig].isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -224,7 +224,7 @@ bool Rook::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
+		if (!g.getBoard()[orig].isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -270,7 +270,7 @@ bool Queen::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (*g.getBoard()[orig].getType() != PieceTypeId::NONE)
+		if (!g.getBoard()[orig].isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -315,22 +315,28 @@ bool Castling::isValid(Game const& game)
 	const auto& rook_piece = game.getBoard()[rook];
 
 	// There must be a rook at the given position
-	if (*rook_piece.getType() != PieceTypeId::ROOK)
+	if (rook_piece.getType()->getId() != PieceTypeId::ROOK)
 		return false;
 
 	bool white_rook = rook_piece.getColour() == Colour::WHITE;
-	Square king = white_rook ? SQ_D1 : SQ_D8;
+	Square king = white_rook ? SQ_E1 : SQ_E8;
 
 	const auto& king_piece = game.getBoard()[king];
 
 	// There must be a king at the given position
-	if (*king_piece.getType() != PieceTypeId::KING)
+	if (king_piece.getType()->getId() != PieceTypeId::KING)
 		return false;
 
 	// Both pieces must have never been moved
 	// This already implies they are of same colour
 	if (game.wasSquareAltered(rook) || game.wasSquareAltered(king))
 		return false;
+
+	// Between the two pieces there must be no other piece
+	Direction king_dir = (king < rook) ? DIR_EAST : DIR_WEST;
+	for (Square sq = king + king_dir; sq != rook; sq += king_dir)
+		if (!game.getBoard()[sq].isClear())
+			return false;
 
 	return true;
 }
@@ -339,7 +345,7 @@ void Castling::apply(Game& game)
 {
 	const auto& rook_piece = game.getBoard()[rook];
 	bool white_rook = rook_piece.getColour() == Colour::WHITE;
-	Square king = white_rook ? SQ_D1 : SQ_D8;
+	Square king = white_rook ? SQ_E1 : SQ_E8;
 
 	Direction king_dir = (king < rook) ? DIR_EAST : DIR_WEST;
 

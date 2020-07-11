@@ -43,7 +43,8 @@ std::optional<Square> Board::find(PieceTypeId piece_type_id,
 	assert(ColourCheck(colour));
 	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
 		auto& p = (*this)[square];
-		if (*p.getType() == piece_type_id && p.getColour() == colour)
+		if (p.getType()->getId() == piece_type_id &&
+			p.getColour() == colour)
 			return square;
 	}
 	return std::nullopt;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <iostream>
 
 #if defined(_MSC_VER)
 #pragma warning(disable: 26812) // Unescoped enum type
@@ -75,7 +76,6 @@ public:
 	virtual void afterApplied(Game& g, Move const& m) const {}
 
 	PieceTypeId getId() const { return id; }
-	operator PieceTypeId() const { return getId(); }
 private:
 	PieceTypeId id;
 };
@@ -139,8 +139,10 @@ public:
 	void setType(std::shared_ptr<PieceType> t) { type = t; }
 	void setColour(Colour cl) { c = cl; }
 	void clear();
+	bool isClear() const;
 
-	Piece& operator=(Piece const& p) {
+	Piece& operator=(Piece const& p)
+	{
 		type = p.type;
 		c = p.c;
 		return *this;
@@ -260,43 +262,53 @@ inline Rank getSquareRank(Square sq) { return static_cast<Rank>(static_cast<int>
 inline File getSquareFile(Square sq) { return static_cast<File>(static_cast<int>(sq) & 0b111); }
 inline Square getSquare(Rank r, File f) { return static_cast<Square>(static_cast<int>(r) << 3 | static_cast<int>(f)); }
 
-inline Direction operator-(Square dest, Square origin) {
+inline Direction operator-(Square dest, Square origin)
+{
 	return static_cast<Direction>(static_cast<int>(dest) - static_cast<int>(origin));
 }
 
-inline Square& operator+=(Square& sq, Direction dir) {
+inline Square& operator+=(Square& sq, Direction dir)
+{
 	return sq = static_cast<Square>(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
-inline Square operator+(Square sq, Direction dir) {
+inline Square operator+(Square sq, Direction dir)
+{
 	return static_cast<Square>(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
-inline Square& operator-=(Square& sq, Direction dir) {
+inline Square& operator-=(Square& sq, Direction dir)
+{
 	return sq = static_cast<Square>(static_cast<int>(sq) - static_cast<int>(dir));
 }
 
-inline Square operator-(Square sq, Direction dir) {
+inline Square operator-(Square sq, Direction dir)
+{
 	return static_cast<Square>(static_cast<int>(sq) - static_cast<int>(dir));
 }
 
-inline Direction operator*(int n, Direction dir) {
+inline Direction operator*(int n, Direction dir)
+{
 	return static_cast<Direction>(n * static_cast<int>(dir));
 }
 
-inline Direction operator*(Direction dir, int n) {
+inline Direction operator*(Direction dir, int n)
+{
 	return static_cast<Direction>(n * static_cast<int>(dir));
 }
 
-inline Square getEnPassantPawnSquare(EnPassantPawn pawn) {
+inline Square getEnPassantPawnSquare(EnPassantPawn pawn)
+{
 	return static_cast<Square>(static_cast<int>(pawn));
 }
 
-inline EnPassantPawn square2EnPassant(Square sq) {
+inline EnPassantPawn square2EnPassant(Square sq)
+{
 	return static_cast<EnPassantPawn>(static_cast<int>(sq));
 }
 
-inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
+inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id)
+{
 	static std::shared_ptr<PieceType> piece_types[] = {
 		std::make_shared<EmptyTile>(),
 		std::make_shared<Pawn>(),
@@ -310,3 +322,23 @@ inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
 }
 
 inline void Piece::clear() { type = getPieceTypeById(PieceTypeId::NONE); }
+inline bool Piece::isClear() const { return type->getId() == PieceTypeId::NONE; }
+
+inline std::ostream& operator<<(std::ostream& out, Rank rk)
+{
+	out << static_cast<int>(rk) + (1 - static_cast<int>(RK_1));
+	return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, File fl)
+{
+	out << static_cast<char>(static_cast<int>(fl) +
+		  (static_cast<int>('a') - static_cast<int>(FL_A)));
+	return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, Square sq)
+{
+	out << getSquareFile(sq) << getSquareRank(sq);
+	return out;
+}

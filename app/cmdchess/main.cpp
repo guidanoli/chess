@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <optional>
 #include <cstdlib>
+#include <fstream>
 #include <map>
 
 #include "game.h"
@@ -65,7 +66,17 @@ optional<Move> maybe_get_move()
 	return Move(*ini, *fin);
 }
 
-optional<PieceTypeId> maybe_get_piece_type_id() {
+optional<Castling> maybe_get_castling()
+{
+	cout << "Rook at... ";
+	auto rook = maybe_get_square();
+	if (!rook)
+		return nullopt;
+	return Castling(*rook);
+}
+
+optional<PieceTypeId> maybe_get_piece_type_id()
+{
 	int opt;
 	cout << "Piece type:" << endl;
 	cout << "[0] Empty" << endl;
@@ -83,7 +94,8 @@ optional<PieceTypeId> maybe_get_piece_type_id() {
 	return piece_type_id;
 }
 
-optional<Colour> maybe_get_colour() {
+optional<Colour> maybe_get_colour()
+{
 	int opt;
 	cout << "Colour:" << endl;
 	cout << "[0] White" << endl;
@@ -96,7 +108,21 @@ optional<Colour> maybe_get_colour() {
 	return colour;
 }
 
-void save_game(Game const& g) {
+optional<bool> maybe_get_boolean(string yes = "Yes",
+                                 string no = "No")
+{
+	int opt;
+	cout << "[0] " << no << endl;
+	cout << "[1] " << yes << endl;
+	cout << ">>> ";
+	cin >> opt;
+	if (opt < 0 || opt > 1)
+		return nullopt;
+	return opt == 1;
+}
+
+void save_game(Game const& g)
+{
 	string ofile;
 	cout << "file = ";
 	cin >> ofile;
@@ -108,7 +134,8 @@ void save_game(Game const& g) {
 		cout << "Error!" << endl;
 }
 
-void load_game(Game& g) {
+void load_game(Game& g)
+{
 	string ifile;
 	cout << "file = ";
 	cin >> ifile;
@@ -143,7 +170,8 @@ void CmdGameListener::catchError(Game const& game, GameError error)
 		cout << "Error: " << error_message->second << endl;
 }
 
-int play(int argc, char** argv) {
+int play(int argc, char** argv)
+{
 	auto g = Game(std::make_shared<CmdGameListener>());
 	while (true) {
 		g.pretty();
@@ -154,6 +182,7 @@ int play(int argc, char** argv) {
 				goto end;
 			cout << "Choose an action:" << endl;
 			cout << "[0] Move" << endl;
+			cout << "[1] Castling" << endl;
 			cout << "[8] Load" << endl;
 			cout << "[9] Save" << endl;
 			cout << ">>> ";
@@ -163,6 +192,17 @@ int play(int argc, char** argv) {
 				if (move_opt) {
 					auto move = *move_opt;
 					if (g.update(&move))
+						break;
+					else
+						cout << "Invalid input" << endl;
+				} else {
+					cout << "Illegal input" << endl;
+				}
+			} else if (opt == 1) {
+				auto castling_opt = maybe_get_castling();
+				if (castling_opt) {
+					auto castling = *castling_opt;
+					if (g.update(&castling))
 						break;
 					else
 						cout << "Invalid input" << endl;
@@ -199,6 +239,7 @@ int create_game_state(int argc, char** argv)
 		cout << "[3] Edit square" << endl;
 		cout << "[4] Next turn" << endl;
 		cout << "[5] Clear board" << endl;
+		cout << "[6] Alter square" << endl;
 		cout << ">>> ";
 		cin >> opt;
 		if (opt == 0) {
@@ -209,15 +250,15 @@ int create_game_state(int argc, char** argv)
 			load_game(g);
 		} else if (opt == 3) {
 			cout << "square = ";
-			auto sq = maybe_get_square();
-			if (sq) {
+			auto sq_opt = maybe_get_square();
+			if (sq_opt) {
 				auto piece_type_id_opt = maybe_get_piece_type_id();
 				if (!piece_type_id_opt) {
 					cout << "Illegal piece type!" << endl;
 					continue;
 				}
 				if (*piece_type_id_opt == PieceTypeId::NONE) {
-					g.getBoard()[*sq].clear();
+					g.getBoard()[*sq_opt].clear();
 					continue;
 				}
 				auto colour_opt = maybe_get_colour();
@@ -227,7 +268,7 @@ int create_game_state(int argc, char** argv)
 				}
 				auto piece_colour = *colour_opt;
 				auto piece_type = getPieceTypeById(*piece_type_id_opt);
-				auto& board_piece = g.getBoard()[*sq];
+				auto& board_piece = g.getBoard()[*sq_opt];
 				board_piece.setType(piece_type);
 			       	board_piece.setColour(piece_colour);
 				g.setEnPassantPawn(EnPassantPawn::NONE);
@@ -241,6 +282,17 @@ int create_game_state(int argc, char** argv)
 			auto& board = g.getBoard();
 			for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
 				board[sq].clear();
+		} else if (opt == 6) {
+			auto sq_opt = maybe_get_square();
+			if (sq_opt) {
+				auto altered_opt = maybe_get_boolean("Altered", "Unaltered");
+				if (altered_opt)
+					g.setSquareAltered(*sq_opt, *altered_opt);
+				else
+					cout << "Illegal boolean!" << endl;
+			} else {
+				cout << "Illegal square!" << endl;
+			}
 		} else {
 			return 1;
 		}
