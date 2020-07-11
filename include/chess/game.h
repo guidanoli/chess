@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <map>
 #include <vector>
 #include <functional>
 #include <memory>
@@ -66,9 +67,6 @@ public:
 	// Set new listener
 	void setListener(std::shared_ptr<GameListener> listener);
 
-	// Check if game is in debug mode
-	bool isDebug() const;
-
 	// Update game state with event
 	bool update(Event* e);
 
@@ -76,30 +74,36 @@ public:
 	Board& getBoard();
 	Board const& getBoard() const;
 
-	// Go to next turn (debug)
-	void nextTurn();
-
 	// Get turn
 	Colour getTurn() const;
 
 	// Get en passant pawn
 	EnPassantPawn getEnPassantPawn() const;
 
-	// Set en passant pawn (debug)
-	void setEnPassantPawn(EnPassantPawn pawn);
-
-	// Check if move can be made
-	bool canMove(Square origin, Square dest) const;
-
 	// Get game phase
 	Phase getPhase() const;
+public:
+	// Serialize/Deserialize game state
+	friend std::ofstream& operator<<(std::ofstream& fs, Game const& g);
+	friend std::ifstream& operator>>(std::ifstream& fs, Game& g);
+
+	// Check whether square was altered
+	bool wasSquareAltered(Square sq) const;
+public:
+	// Check if game is in debug mode
+	bool isDebug() const;
+
+	// Go to next turn (debug)
+	void nextTurn();
+
+	// Set en passant pawn (debug)
+	void setEnPassantPawn(EnPassantPawn pawn);
 
 	// Print board (debug)
 	void pretty() const;
 
-	// Serialize/Deserialize game state
-	friend std::ofstream& operator<<(std::ofstream& fs, Game const& g);
-	friend std::ifstream& operator>>(std::ifstream& fs, Game& g);
+	// Set altered square (debug)
+	void setSquareAltered(Square sq, bool altered);
 private:
 	void privateSetEnPassantPawn(EnPassantPawn pawn);
 	void privateNextTurn();
@@ -109,6 +113,7 @@ private:
 	void lookForCheckmate();
 	void lookForPromotion();
 	bool inCheck(Colour c) const;
+	void privateSetSquareAltered(Square sq, bool altered);
 	bool simulate(std::function<bool(Game&)> cb) const;
 private:
 	bool m_debug;
@@ -116,7 +121,9 @@ private:
 	Colour m_turn;
 	EnPassantPawn m_enpassant_pawn;
 	std::shared_ptr<GameListener> m_listener;
+	std::map<Square, bool> m_altered_squares;
 	Phase m_phase;
 
+	friend class Move;
 	friend class Pawn;
 };

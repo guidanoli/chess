@@ -37,12 +37,14 @@ Game::Game(Game const& game) :
 	m_turn(game.m_turn),
 	m_enpassant_pawn(game.m_enpassant_pawn),
 	m_listener(game.m_listener),
+	m_altered_squares(game.m_altered_squares),
 	m_phase(game.m_phase)
 {}
 
 void Game::pretty() const
 {
-	print_chess_board(m_board);
+	if (m_debug)
+		print_chess_board(m_board);
 }
 
 void Game::setListener(std::shared_ptr<GameListener> listener)
@@ -73,12 +75,6 @@ Square Game::getKingSquare(Colour c) const
 	auto king_sq_opt = m_board.find(PieceTypeId::KING, c);
 	assert(king_sq_opt); // all kings must be on the board
 	return *king_sq_opt;
-}
-
-bool Game::canMove(Square origin, Square dest) const
-{
-	Move attack(origin, dest);
-	return canUpdate(&attack);
 }
 
 bool Game::update(Event* e)
@@ -228,78 +224,119 @@ void Game::privateSetEnPassantPawn(EnPassantPawn pawn)
 	m_enpassant_pawn = pawn;
 }
 
-#define VERSION 0
-
-std::ofstream& operator<<(std::ofstream& fs, Game const& g)
+bool Game::wasSquareAltered(Square sq) const
 {
-	fs << VERSION << std::endl;
-	fs << (int) g.m_turn << std::endl;
-	fs << (int) g.m_enpassant_pawn << std::endl;
-	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
-		const auto& p = g.m_board[square];
-		const auto id = p.getType()->getId();
-		if (id == PieceTypeId::NONE)
-			continue;
-		fs << square << " ";
-		fs << (int) p.getColour() << " ";
-		fs << (int) id << std::endl;
-	}
-	fs << -1;
-	return fs;
+	auto it = m_altered_squares.find(sq);
+	return it != m_altered_squares.end() && it->second;
 }
+
+void Game::setSquareAltered(Square sq, bool altered)
+{
+	if (m_debug)
+		privateSetSquareAltered(sq, altered);
+}
+
+void Game::privateSetSquareAltered(Square sq, bool altered)
+{
+	m_altered_squares[sq] = altered;
+}
+
+auto constexpr chesslib_version = 1;
+
+#define failprefix "[ERROR] Chesslib: "
 
 #define failandreturn(fs) do { \
 	fs.setstate(std::ios::failbit); \
 	return fs; \
 } while(0)
 
+std::ofstream& operator<<(std::ofstream& fs, Game const& g)
+{
+	fs << chesslib_version << std::endl;
+	fs << (int) g.m_turn << std::endl;
+	fs << (int) g.m_enpassant_pawn << std::endl;
+	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
+		const auto& p = g.m_board[square];
+		const auto id = p.getType()->getId();
+		const auto altered = g.wasSquareAltered(square);
+		if (id == PieceTypeId::NONE)
+			continue;
+		fs << square << " ";
+		fs << (int) p.getColour() << " ";
+		fs << (int) id << " ";
+		fs << altered << std::endl;
+	}
+	fs << -1;
+	return fs;
+}
+
 std::ifstream& operator>>(std::ifstream& fs, Game& g)
 {
 	int version;
 	fs >> version;
-	if (version != VERSION)
+	if (version != chesslib_version) {
+		std::cerr << failprefix "Incompatible version " << version
+		          << " (current is " << chesslib_version << ")" << std::endl;
 		failandreturn(fs);
+	}
 	int turn;
 	fs >> turn;
-	if (turn < 0 || turn > 1)
+	if (turn < 0 || turn > 1) {
+		std::cerr << failprefix "Invalid turn " << turn << std::endl;
 		failandreturn(fs);
-	g.m_turn = Colour(turn);
+	}
+	g.m_turn = static_cast<Colour>(turn);
 	int enpassant;
 	fs >> enpassant;
-	if (enpassant != (int) EnPassantPawn::NONE) {
-		Square square = (Square) enpassant;
+	auto en_passant_pawn = static_cast<EnPassantPawn>(enpassant);
+	if (en_passant_pawn != EnPassantPawn::NONE) {
+		Square square = static_cast<Square>(enpassant);
 		File f = getSquareFile(square);
-		if (!FileCheck(f))
+		if (!FileCheck(f)) {
+			std::cerr << failprefix "Invalid enpassant file " << f << std::endl;
 			failandreturn(fs);
+		}
 		Rank r = getSquareRank(square);
-		if (r != RK_3 && r != RK_6)
+		if (r != RK_3 && r != RK_6) {
+			std::cerr << failprefix "Invalid enpassant rank " << r << std::endl;
 			failandreturn(fs);
+		}
 	}
-	g.m_enpassant_pawn = (EnPassantPawn) enpassant;
+	g.m_enpassant_pawn = static_cast<EnPassantPawn>(enpassant);
 	int sq;
 	fs >> sq;
 	std::vector<bool> squares(64, false);
 	while (sq != -1) {
-		Square square = (Square) sq;
-		if (!SquareCheck(square))
+		Square square = static_cast<Square>(sq);
+		if (!SquareCheck(square)) {
+			std::cerr << failprefix "Invalid square " << square << std::endl;
 			failandreturn(fs);
+		}
 		squares[sq] = true;
 		auto& piece = g.m_board[square];
 		int colour;
 		fs >> colour;
-		if (colour < 0 || colour > 1)
+		if (colour < 0 || colour > 1) {
+			std::cerr << failprefix "Invalid colour " << colour << std::endl;
 			failandreturn(fs);
-		piece.setColour((Colour) colour);
+		}
+		piece.setColour(static_cast<Colour>(colour));
 		int type;
 		fs >> type;
-		if (!PieceTypeIdCheck((PieceTypeId) type))
+		auto piece_type_id = static_cast<PieceTypeId>(type);
+		if (!PieceTypeIdCheck(piece_type_id)) {
+			std::cerr << failprefix "Invalid piece type" << type << std::endl;
 			failandreturn(fs);
-		piece.setType(getPieceTypeById((PieceTypeId) type));
+		}
+		piece.setType(getPieceTypeById(piece_type_id));
+		bool altered;
+		fs >> altered;
+		g.privateSetSquareAltered(square, altered);
 		fs >> sq;
 	}
-	for (int i = 0; i < 64; ++i)
-		if (!squares[i])
-			g.m_board[(Square) i].clear();
+	for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
+		if (!squares[static_cast<std::size_t>(sq)])
+			g.m_board[sq].clear();
 	g.lookForCheckmate();
 	return fs;
 }

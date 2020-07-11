@@ -46,3 +46,21 @@ public:
 private:
 	Square origin, dest;
 };
+
+class Castling : public Event
+{
+public:
+	// Create a castling event that involves a rook and the king of same colour
+	Castling(Square rook);
+
+	// Get square where rook is located
+	Square getRookSquare() const;
+
+	// Check if castling is valid
+	bool isValid(Game const& game) override;
+
+	// Apply castling to game state
+	void apply(Game& game) override;
+private:
+	Square rook;
+};

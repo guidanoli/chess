@@ -69,6 +69,9 @@ void Move::apply(Game& game)
 	origpiece.clear();
 
 	destpiece.getType()->afterApplied(game, *this);
+
+	game.privateSetSquareAltered(origin, true);
+	game.privateSetSquareAltered(dest, true);
 }
 
 bool Pawn::canApply(Game const& g, Move const& m) const
@@ -297,4 +300,52 @@ void Pawn::afterApplied(Game& g, Move const& m) const
 			}
 		}
 	}
+}
+
+Castling::Castling(Square rook) : rook(rook) {}
+
+Square Castling::getRookSquare() const { return rook; }
+
+bool Castling::isValid(Game const& game)
+{
+	// Rook must be in one of the four corners of the board
+	if (rook != SQ_A1 && rook != SQ_A8 && rook != SQ_H1 && rook != SQ_H8)
+		return false;
+
+	const auto& rook_piece = game.getBoard()[rook];
+
+	// There must be a rook at the given position
+	if (*rook_piece.getType() != PieceTypeId::ROOK)
+		return false;
+
+	bool white_rook = rook_piece.getColour() == Colour::WHITE;
+	Square king = white_rook ? SQ_D1 : SQ_D8;
+
+	const auto& king_piece = game.getBoard()[king];
+
+	// There must be a king at the given position
+	if (*king_piece.getType() != PieceTypeId::KING)
+		return false;
+
+	// Both pieces must have never been moved
+	// This already implies they are of same colour
+	if (game.wasSquareAltered(rook) || game.wasSquareAltered(king))
+		return false;
+
+	return true;
+}
+
+void Castling::apply(Game& game)
+{
+	const auto& rook_piece = game.getBoard()[rook];
+	bool white_rook = rook_piece.getColour() == Colour::WHITE;
+	Square king = white_rook ? SQ_D1 : SQ_D8;
+
+	Direction king_dir = (king < rook) ? DIR_EAST : DIR_WEST;
+
+	Square king_dest = king + 2 * king_dir;
+	Square rook_dest = king_dest - king_dir;
+
+	Move(king, king_dest).apply(game);
+	Move(rook, rook_dest).apply(game);
 }

@@ -198,14 +198,17 @@ enum class Phase
 	MAX
 };
 
+#define ENABLE_BINARY_OP(T, op) \
+constexpr T operator ## op(T d1, T d2) { return static_cast<T>(static_cast<int>(d1) op static_cast<int>(d2)); }	\
+
 // Macros for defining extra base operations on enumerations
 // From Stockfish source code
 
-#define ENABLE_BASE_OPERATORS_ON(T)																			\
-constexpr T operator+(T d1, T d2) { return static_cast<T>(static_cast<int>(d1) + static_cast<int>(d2)); }	\
-constexpr T operator-(T d1, T d2) { return static_cast<T>(static_cast<int>(d1) - static_cast<int>(d2)); }	\
-constexpr T operator-(T d) { return static_cast<T>(-static_cast<int>(d)); }									\
-inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }													\
+#define ENABLE_BASE_OPERATORS_ON(T)												\
+ENABLE_BINARY_OP(T, +)															\
+ENABLE_BINARY_OP(T, -)															\
+constexpr T operator-(T d) { return static_cast<T>(-static_cast<int>(d)); }		\
+inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }						\
 inline T& operator-=(T& d1, T d2) { return d1 = d1 - d2; }
 
 #define ENABLE_INCR_OPERATORS_ON(T)													\
@@ -221,13 +224,19 @@ inline constexpr bool T ## Check (T const& d) { return static_cast<int>(d) >= 0 
 #define ENABLE_MIRROR_OPERATOR_ON(T, MAX) \
 inline constexpr T operator~(T d) { return static_cast<T>(static_cast<int>(MAX) - 1 - static_cast<int>(d)); }
 
+#define ENABLE_COMPARE_OPERATOR_ON(T) \
+ENABLE_BINARY_OP(T, >) \
+ENABLE_BINARY_OP(T, <) \
+ENABLE_BINARY_OP(T, >=) \
+ENABLE_BINARY_OP(T, <=)
+
 ENABLE_BASE_OPERATORS_ON(Direction)
 
 ENABLE_INCR_OPERATORS_ON(Square)
 ENABLE_INCR_OPERATORS_ON(File)
 ENABLE_INCR_OPERATORS_ON(Rank)
 
-ENABLE_VALIDITY_CHECK(Square, SQ_CNT);
+ENABLE_VALIDITY_CHECK(Square, SQ_CNT)
 ENABLE_VALIDITY_CHECK(File, FL_CNT)
 ENABLE_VALIDITY_CHECK(Rank, RK_CNT)
 ENABLE_VALIDITY_CHECK(Colour, Colour::MAX)
@@ -238,40 +247,53 @@ ENABLE_MIRROR_OPERATOR_ON(Square, SQ_CNT)
 ENABLE_MIRROR_OPERATOR_ON(File, FL_CNT)
 ENABLE_MIRROR_OPERATOR_ON(Rank, RK_CNT)
 
-#undef ENABLE_BASE_OPERATORS_ON
-#undef ENABLE_INCR_OPERATORS_ON
+ENABLE_COMPARE_OPERATOR_ON(Square)
+
+#undef ENABLE_COMPARE_OPERATOR_ON
 #undef ENABLE_MIRROR_OPERATOR_ON
+#undef ENABLE_VALIDITY_CHECK
+#undef ENABLE_INCR_OPERATORS_ON
+#undef ENABLE_BASE_OPERATORS_ON
+#undef ENABLE_BINARY_OP
 
 inline Rank getSquareRank(Square sq) { return static_cast<Rank>(static_cast<int>(sq) >> 3); }
 inline File getSquareFile(Square sq) { return static_cast<File>(static_cast<int>(sq) & 0b111); }
 inline Square getSquare(Rank r, File f) { return static_cast<Square>(static_cast<int>(r) << 3 | static_cast<int>(f)); }
 
 inline Direction operator-(Square dest, Square origin) {
-	return Direction(static_cast<int>(dest) - static_cast<int>(origin));
+	return static_cast<Direction>(static_cast<int>(dest) - static_cast<int>(origin));
 }
 
 inline Square& operator+=(Square& sq, Direction dir) {
-	return sq = Square(static_cast<int>(sq) + static_cast<int>(dir));
+	return sq = static_cast<Square>(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
 inline Square operator+(Square sq, Direction dir) {
-	return Square(static_cast<int>(sq) + static_cast<int>(dir));
+	return static_cast<Square>(static_cast<int>(sq) + static_cast<int>(dir));
 }
 
 inline Square& operator-=(Square& sq, Direction dir) {
-	return sq = Square(static_cast<int>(sq) - static_cast<int>(dir));
+	return sq = static_cast<Square>(static_cast<int>(sq) - static_cast<int>(dir));
 }
 
 inline Square operator-(Square sq, Direction dir) {
-	return Square(static_cast<int>(sq) - static_cast<int>(dir));
+	return static_cast<Square>(static_cast<int>(sq) - static_cast<int>(dir));
+}
+
+inline Direction operator*(int n, Direction dir) {
+	return static_cast<Direction>(n * static_cast<int>(dir));
+}
+
+inline Direction operator*(Direction dir, int n) {
+	return static_cast<Direction>(n * static_cast<int>(dir));
 }
 
 inline Square getEnPassantPawnSquare(EnPassantPawn pawn) {
-	return Square(static_cast<int>(pawn));
+	return static_cast<Square>(static_cast<int>(pawn));
 }
 
 inline EnPassantPawn square2EnPassant(Square sq) {
-	return EnPassantPawn(static_cast<int>(sq));
+	return static_cast<EnPassantPawn>(static_cast<int>(sq));
 }
 
 inline std::shared_ptr<PieceType> getPieceTypeById(PieceTypeId id) {
