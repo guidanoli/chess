@@ -8,14 +8,14 @@
 // and mirrors it for white and black pieces
 #define R_MIRROR(m, r, f, t)                               \
 do {                                                       \
-	m[r][f] = Piece(getPieceTypeById(t), Colour::WHITE);   \
-	m[~r][f] = Piece(getPieceTypeById(t), Colour::BLACK);  \
+	m[r][f].setType(getPieceTypeById(t));              \
+	m[r][f].setColour(Colour::WHITE);                  \
+	m[~r][f].setType(getPieceTypeById(t));             \
+	m[~r][f].setColour(Colour::BLACK);                 \
 } while(0)
 
 Board::Board()
 {
-	m_matrix = std::array<std::array<Piece, 8>, 8>();
-
 	static PieceTypeId first_rank_ids[8] = {
 		PieceTypeId::ROOK,
 		PieceTypeId::KNIGHT,
@@ -49,9 +49,12 @@ std::optional<Square> Board::find(PieceTypeId piece_type_id,
 	return std::nullopt;
 }
 
-Board::Board(Board const& board) :
-	m_matrix(board.m_matrix)
-{}
+Board::Board(Board const& board)
+{ 
+	std::copy(&board.m_matrix[0][0],
+	          &board.m_matrix[0][0] + 64,
+	          &m_matrix[0][0]);
+}
 
 Piece& Board::operator[](Square sq)
 {

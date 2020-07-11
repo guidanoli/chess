@@ -1,10 +1,8 @@
 #pragma once
 
-#include <memory>
+#include "types.h"
 
 class Game;
-enum Square;
-enum class Colour;
 
 // An event is the parent class of all the possible events that can occurr
 // in a chess game and change the game state.
