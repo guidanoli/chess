@@ -1,53 +1,38 @@
 #pragma once
 
 #include <memory>
+#include <iosfwd>
+#include <functional>
 
+#include "error.h"
+#include "types.h"
+
+class GameEvent;
 class GameState;
-enum Square;
-class Piece;
-enum class Colour;
-enum class EnPassantPawn;
+class GameListener;
 
-class GameStateControllerConst
+class GameController
 {
 public:
-	Piece const& getPieceAt(Square sq) const;
-	Colour getTurn() const;
-	EnPassantPawn getEnPassantPawn() const;
-	bool wasSquareAltered(Square sq) const;
-public:
-	GameStateControllerConst(GameStateControllerConst const&) = delete;
-	GameStateControllerConst& operator=(GameStateControllerConst const&) = delete;
-protected:
-	GameStateControllerConst(std::shared_ptr<GameState const> game_ptr);
-protected:
-	std::shared_ptr<GameState const> game_ptr_const;
+	GameController(std::unique_ptr<GameState> gameStatePtr,
+	               std::shared_ptr<GameListener> listener);
+	GameController(GameController const& other);
+	GameState const& getState() const;
+	bool update(std::shared_ptr<GameEvent> event);
+	bool loadState(std::istream& is);
+	bool saveState(std::ostream& os) const;
 private:
-	friend class GameState;
-};
-
-class GameStateController : public GameStateControllerConst
-{
-public:
-	void movePiece(Square origin, Square dest);
-	void clearSquare(Square sq);
-	Piece& getPieceAt(Square sq);
-	void setEnPassantPawn(EnPassantPawn pawn);
-protected:
-	GameStateController(std::shared_ptr<GameState> game_ptr);
-protected:
-	std::shared_ptr<GameState> game_ptr;
+	void clearListener();
+	bool inCheck(Colour c) const;
+	Square getKingSquare(Colour c) const;
+	void lookForPromotion();
+	void lookForCheckmate();
+	bool canUpdate(std::shared_ptr<GameEvent> e) const;
+	bool wouldEventCauseCheck(std::shared_ptr<GameEvent> e) const;
+	void raiseError(GameError err) const;
+	using simulationCallback = std::function<bool(GameController&)>;
+	bool simulate(simulationCallback cb) const;
 private:
-	friend class GameState;
-};
-
-class DebugGameStateController : public GameStateController
-{
-public:
-	void nextTurn();
-	void setSquareAltered(Square sq, bool altered);
-protected:
-	DebugGameStateController(std::shared_ptr<GameState> game_ptr);
-private:
-	friend class GameState;
+	std::unique_ptr<GameState> m_state;
+	std::shared_ptr<GameListener> m_listener;
 };

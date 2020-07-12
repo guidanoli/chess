@@ -64,17 +64,16 @@ enum class Colour
 	MAX
 };
 
-class GameStateController;
-class GameStateControllerConst;
 class Move;
+class GameState;
 
 class PieceType
 {
 public:
 	PieceType(PieceTypeId id = PieceTypeId::NONE) : id(id) {}
 
-	virtual bool canApply(GameStateControllerConst& g, Move const& m) const { return false; }
-	virtual void afterApplied(GameStateController& g, Move const& m) const {}
+	virtual bool canApply(GameState const& gameState, Move const& move) const { return false; }
+	virtual void afterApplied(GameState& gameState, Move const& move) const {}
 
 	PieceTypeId getId() const { return id; }
 private:
@@ -87,43 +86,43 @@ class Pawn : public PieceType
 {
 public:
 	Pawn() : PieceType(PieceTypeId::PAWN) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
-	void afterApplied(GameStateController& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
+	void afterApplied(GameState& gameState, Move const& move) const override;
 };
 
 class King : public PieceType
 {
 public:
 	King() : PieceType(PieceTypeId::KING) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
 };
 
 class Queen : public PieceType
 {
 public:
 	Queen() : PieceType(PieceTypeId::QUEEN) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
 };
 
 class Bishop : public PieceType
 {
 public:
 	Bishop() : PieceType(PieceTypeId::BISHOP) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
 };
 
 class Knight : public PieceType
 {
 public:
 	Knight() : PieceType(PieceTypeId::KNIGHT) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
 };
 
 class Rook : public PieceType
 {
 public:
 	Rook() : PieceType(PieceTypeId::ROOK) {}
-	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	bool canApply(GameState const& gameState, Move const& move) const override;
 };
 
 class Piece
@@ -282,6 +281,13 @@ inline Direction operator*(Direction dir, int n)
 inline Square getEnPassantPawnSquare(EnPassantPawn pawn)
 {
 	return static_cast<Square>(static_cast<int>(pawn));
+}
+
+inline bool EnPassantPawnCheck(EnPassantPawn pawn)
+{
+	auto const sq = getEnPassantPawnSquare(pawn);
+	auto const rk = getSquareRank(sq);
+	return sq == SQ_CNT || rk == RK_3 || rk == RK_6;
 }
 
 inline EnPassantPawn square2EnPassant(Square sq)

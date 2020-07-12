@@ -1,7 +1,7 @@
 #pragma once
 
 enum class GameError;
-class GameState;
+class GameController;
 enum class PieceTypeId;
 enum Square;
 
@@ -18,8 +18,8 @@ public:
 	// Asks for a new piece type the pawn at the given square will promote to
 	// If the piece type is invalid (NONE, KING or PAWN), the routine will
 	// be called repeatedly, and an error message will be set.
-	virtual PieceTypeId promotePawn(GameState const& game, Square pawn) = 0;
+	virtual PieceTypeId promotePawn(GameController const& gameController, Square pawn) = 0;
 
 	// Triggers an error alert that should be handled by the listener
-	virtual void catchError(GameState const& game, GameError err) = 0;
+	virtual void catchError(GameController const& gameController, GameError err) = 0;
 };

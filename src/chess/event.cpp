@@ -1,15 +1,12 @@
 #include "event.h"
 
 #include "state.h"
-#include "board.h"
-#include "types.h"
-#include "controller.h"
 
 Move::Move(Square origin, Square dest) :
 	origin(origin), dest(dest)
 {}
 
-bool Move::isValid(GameStateControllerConst& game)
+bool Move::isValid(GameState const& game)
 {
 	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
@@ -31,7 +28,7 @@ bool Move::isValid(GameStateControllerConst& game)
 	return moved_piece.getType()->canApply(game, *this);
 }
 
-bool Move::isValidCheck(GameStateControllerConst& game)
+bool Move::isValidCheck(GameState const& game)
 {
 	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
@@ -60,7 +57,7 @@ Square Move::getDestination() const
 	return dest;
 }
 
-void Move::apply(GameStateController& game)
+void Move::apply(GameState& game)
 {
 	auto destpiece = game.getPieceAt(dest);
 
@@ -69,7 +66,7 @@ void Move::apply(GameStateController& game)
 	destpiece.getType()->afterApplied(game, *this);
 }
 
-bool Pawn::canApply(GameStateControllerConst& g, Move const& m) const
+bool Pawn::canApply(GameState const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -96,7 +93,7 @@ bool Pawn::canApply(GameStateControllerConst& g, Move const& m) const
 	}
 }
 
-bool King::canApply(GameStateControllerConst& g, Move const& m) const
+bool King::canApply(GameState const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -110,7 +107,7 @@ bool King::canApply(GameStateControllerConst& g, Move const& m) const
 		   (orig_file != FL_H && orig + DIR_EAST  == dest);
 }
 
-bool Knight::canApply(GameStateControllerConst& g, Move const& m) const
+bool Knight::canApply(GameState const& g, Move const& m) const
 {
 	auto const orig = m.getOrigin();
 	auto const dest = m.getDestination();
@@ -130,7 +127,7 @@ bool Knight::canApply(GameStateControllerConst& g, Move const& m) const
 	return rank_diff + file_diff == 3;
 }
 
-bool Bishop::canApply(GameStateControllerConst& g, Move const& m) const
+bool Bishop::canApply(GameState const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -182,7 +179,7 @@ bool Bishop::canApply(GameStateControllerConst& g, Move const& m) const
 	}
 }
 
-bool Rook::canApply(GameStateControllerConst& g, Move const& m) const
+bool Rook::canApply(GameState const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -234,7 +231,7 @@ bool Rook::canApply(GameStateControllerConst& g, Move const& m) const
 	}
 }
 
-bool Queen::canApply(GameStateControllerConst& g, Move const& m) const
+bool Queen::canApply(GameState const& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -280,7 +277,7 @@ bool Queen::canApply(GameStateControllerConst& g, Move const& m) const
 	}
 }
 
-void Pawn::afterApplied(GameStateController& g, Move const& m) const
+void Pawn::afterApplied(GameState& g, Move const& m) const
 {
 	Direction dir = m.getDestination() - m.getOrigin();
 
@@ -307,7 +304,7 @@ Castling::Castling(Square rook) : rook(rook) {}
 
 Square Castling::getRookSquare() const { return rook; }
 
-bool Castling::isValid(GameStateControllerConst& game)
+bool Castling::isValid(GameState const& game)
 {
 	// Rook must be in one of the four corners of the board
 	if (rook != SQ_A1 && rook != SQ_A8 && rook != SQ_H1 && rook != SQ_H8)
@@ -342,7 +339,7 @@ bool Castling::isValid(GameStateControllerConst& game)
 	return true;
 }
 
-void Castling::apply(GameStateController& game)
+void Castling::apply(GameState& game)
 {
 	const auto& rook_piece = game.getPieceAt(rook);
 	bool white_rook = rook_piece.getColour() == Colour::WHITE;

@@ -68,3 +68,27 @@ Piece const& Board::operator[](Square sq) const
 	assert(SquareCheck(sq));
 	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
 }
+
+void Board::pretty(std::ostream& os) const
+{
+	os << "    ";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << fc << " ";
+	os << std::endl << "   _";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << "__";
+	os << std::endl;
+	for (Rank r = RK_8; r >= RK_1; --r) {
+		os << r - RK_1 + 1 << " | ";
+		for (File f = FL_A; f <= FL_H; ++f) {
+			Square sq = getSquare(r, f);
+			Piece p = operator[](sq);
+			os << p << " ";
+		}
+		os << "|" << std::endl;
+	}
+	os << "   ";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << "--";
+	os << "-" << std::endl;
+}

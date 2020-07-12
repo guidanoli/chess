@@ -11,7 +11,6 @@
 #include "event.h"
 #include "error.h"
 #include "board.h"
-#include "debug.h"
 
 using namespace std;
 
@@ -36,8 +35,8 @@ static map<GameError, string> error_message_map;
 
 class CmdGameListener : public GameListener
 {
-	PieceTypeId promotePawn(GameState const& game, Square pawn) override;
-	void catchError(GameState const& game, GameError error) override;
+	PieceTypeId promotePawn(GameController const& game, Square pawn) override;
+	void catchError(GameController const& game, GameError error) override;
 };
 
 void print_turn(GameState const& game)
@@ -59,7 +58,7 @@ optional<Square> maybe_get_square()
 	return getSquare(r, f);
 }
 
-optional<Move> maybe_get_move()
+optional<shared_ptr<Move>> maybe_get_move()
 {
 	cout << "Piece at... ";
 	auto ini = maybe_get_square();
@@ -69,16 +68,16 @@ optional<Move> maybe_get_move()
 	auto fin = maybe_get_square();
 	if (!fin)
 		return nullopt;
-	return Move(*ini, *fin);
+	return make_shared<Move>(*ini, *fin);
 }
 
-optional<Castling> maybe_get_castling()
+optional<shared_ptr<Castling>> maybe_get_castling()
 {
 	cout << "Rook at... ";
 	auto rook = maybe_get_square();
 	if (!rook)
 		return nullopt;
-	return Castling(*rook);
+	return make_shared<Castling>(*rook);
 }
 
 optional<PieceTypeId> maybe_get_piece_type_id()
@@ -149,7 +148,7 @@ void load_game(GameState& g)
 	fs >> g;
 	if (fs) {
 		cout << "Loaded!" << endl;
-		g.pretty(cout);
+		g.getBoard().pretty(cout);
 		print_turn(g);
 	} else {
 		cout << "Error!" << endl;
@@ -157,7 +156,36 @@ void load_game(GameState& g)
 	}
 }
 
-PieceTypeId CmdGameListener::promotePawn(GameState const& game, Square pawn)
+void load_game_controller(GameController& gc)
+{
+	string ifile;
+	cout << "file = ";
+	cin >> ifile;
+	ifstream fs(ifile);
+	if (gc.loadState(fs) && fs) {
+		cout << "Loaded!" << endl;
+		auto const& g = gc.getState();
+		g.getBoard().pretty(cout);
+		print_turn(g);
+	} else {
+		cout << "Error!" << endl;
+		exit(1);
+	}
+}
+
+void save_game_controller(GameController const& gc)
+{
+	string ofile;
+	cout << "file = ";
+	cin >> ofile;
+	ofstream fs(ofile);
+	if (gc.saveState(fs) && fs)
+		cout << "Saved!" << endl;
+	else
+		cout << "Error!" << endl;
+}
+
+PieceTypeId CmdGameListener::promotePawn(GameController const& game, Square pawn)
 {
 	cout << "You may promote your pawn to a new type" << endl;
 	auto piece_opt = maybe_get_piece_type_id();
@@ -167,7 +195,7 @@ PieceTypeId CmdGameListener::promotePawn(GameState const& game, Square pawn)
 		return PieceTypeId::QUEEN;
 }
 
-void CmdGameListener::catchError(GameState const& game, GameError error)
+void CmdGameListener::catchError(GameController const& game, GameError error)
 {
 	auto error_message = error_message_map.find(error);
 	if (error_message == error_message_map.end())
@@ -178,9 +206,11 @@ void CmdGameListener::catchError(GameState const& game, GameError error)
 
 int play(int argc, char** argv)
 {
-	auto g = GameState(std::make_shared<CmdGameListener>());
+	auto gc = GameController(make_unique<GameState>(),
+	                         make_shared<CmdGameListener>());
+	auto const& g = gc.getState();
 	while (true) {
-		g.pretty(cout);
+		g.getBoard().pretty(cout);
 		print_turn(g);
 		while (true) {
 			int opt;
@@ -196,8 +226,7 @@ int play(int argc, char** argv)
 			if (opt == 0) {
 				auto move_opt = maybe_get_move();
 				if (move_opt) {
-					auto move = *move_opt;
-					if (g.update(&move))
+					if (gc.update(*move_opt))
 						break;
 					else
 						cout << "Invalid input" << endl;
@@ -207,8 +236,7 @@ int play(int argc, char** argv)
 			} else if (opt == 1) {
 				auto castling_opt = maybe_get_castling();
 				if (castling_opt) {
-					auto castling = *castling_opt;
-					if (g.update(&castling))
+					if (gc.update(*castling_opt))
 						break;
 					else
 						cout << "Invalid input" << endl;
@@ -216,9 +244,9 @@ int play(int argc, char** argv)
 					cout << "Illegal input" << endl;
 				}
 			} else if (opt == 8) {
-				load_game(g);
+				load_game_controller(gc);
 			} else if (opt == 9) {
-				save_game(g);
+				save_game_controller(gc);
 			}
 		}
 	}
@@ -234,12 +262,10 @@ end:
 
 int create_game_state(int argc, char** argv)
 {
-	auto dbg = DebugGameState(std::make_shared<CmdGameListener>());
-	auto dbg_control = dbg.getController();
-	auto g = dbg.getState();
+	auto g = GameState();
 	int opt;
 	while(true) {
-		g->pretty(cout);
+		g.getBoard().pretty(cout);
 		cout << "Choose an action:" << endl;
 		cout << "[0] Exit" << endl;
 		cout << "[1] Save" << endl;
@@ -253,9 +279,9 @@ int create_game_state(int argc, char** argv)
 		if (opt == 0) {
 			return 0;
 		} else if (opt == 1) {
-			save_game(*g);
+			save_game(g);
 		} else if (opt == 2) {
-			load_game(*g);
+			load_game(g);
 		} else if (opt == 3) {
 			cout << "square = ";
 			auto sq_opt = maybe_get_square();
@@ -266,7 +292,7 @@ int create_game_state(int argc, char** argv)
 					continue;
 				}
 				if (*piece_type_id_opt == PieceTypeId::NONE) {
-					dbg_control.clearSquare(*sq_opt);
+					g.clearSquare(*sq_opt);
 					continue;
 				}
 				auto colour_opt = maybe_get_colour();
@@ -276,25 +302,25 @@ int create_game_state(int argc, char** argv)
 				}
 				auto piece_colour = *colour_opt;
 				auto piece_type = getPieceTypeById(*piece_type_id_opt);
-				auto& board_piece = dbg_control.getPieceAt(*sq_opt);
+				auto& board_piece = g.getPieceAt(*sq_opt);
 				board_piece.setType(piece_type);
 			    board_piece.setColour(piece_colour);
-				dbg_control.setEnPassantPawn(EnPassantPawn::NONE);
+				g.setEnPassantPawn(EnPassantPawn::NONE);
 			} else {
 				cout << "Illegal square!" << endl;
 			}
 		} else if (opt == 4) {
-			dbg_control.nextTurn();
-			print_turn(*g);
+			g.nextTurn();
+			print_turn(g);
 		} else if (opt == 5) {
 			for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
-				dbg_control.clearSquare(sq);
+				g.clearSquare(sq);
 		} else if (opt == 6) {
 			auto sq_opt = maybe_get_square();
 			if (sq_opt) {
 				auto altered_opt = maybe_get_boolean("Altered", "Unaltered");
 				if (altered_opt)
-					dbg_control.setSquareAltered(*sq_opt, *altered_opt);
+					g.setSquareAltered(*sq_opt, *altered_opt);
 				else
 					cout << "Illegal boolean!" << endl;
 			} else {
