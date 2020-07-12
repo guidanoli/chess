@@ -152,25 +152,6 @@ private:
 	Colour c;
 };
 
-enum CastlingRookRights : int
-{
-	MOVED_NOTHING          = 0,
-	MOVED_WHITE_LEFT_ROOK  = 1 << 0,
-	MOVED_WHITE_RIGHT_ROOK = 1 << 1,
-	MOVED_BLACK_LEFT_ROOK  = 1 << 2,
-	MOVED_BLACK_RIGHT_ROOK = 1 << 3,
-	MOVED_WHITE_KING       = 1 << 4,
-	MOVED_BLACK_KING       = 1 << 5,
-};
-
-enum class CastlingRook
-{
-	WHITE_LEFT  = SQ_A1,
-	WHITE_RIGHT = SQ_H1,
-	BLACK_LEFT  = SQ_H8,
-	BLACK_RIGHT = SQ_A8,
-};
-
 enum class EnPassantPawn
 {
 	NONE     = SQ_CNT,

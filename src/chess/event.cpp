@@ -117,16 +117,22 @@ bool King::canApply(Game const& g, Move const& m) const
 
 bool Knight::canApply(Game const& g, Move const& m) const
 {
-	auto dir = m.getDestination() - m.getOrigin();
+	auto const orig = m.getOrigin();
+	auto const dest = m.getDestination();
 
-	return dir == DIR_NORTH * 2 + DIR_EAST ||
-		   dir == DIR_NORTH * 2 + DIR_WEST ||
-		   dir == DIR_SOUTH * 2 + DIR_EAST ||
-		   dir == DIR_SOUTH * 2 + DIR_WEST ||
-		   dir == DIR_NORTH + 2 * DIR_EAST ||
-		   dir == DIR_NORTH + 2 * DIR_WEST ||
-		   dir == DIR_SOUTH + 2 * DIR_EAST ||
-		   dir == DIR_SOUTH + 2 * DIR_WEST;
+	auto const orig_rank = getSquareRank(orig);
+	auto const orig_file = getSquareFile(orig);
+
+	auto const dest_rank = getSquareRank(dest);
+	auto const dest_file = getSquareFile(dest);
+
+	auto const rank_diff = static_cast<int>(orig_rank) - static_cast<int>(dest_rank);
+	auto const file_diff = static_cast<int>(orig_file) - static_cast<int>(dest_file);
+
+	if (rank_diff == 0 || file_diff == 0)
+		return false;
+
+	return rank_diff + file_diff == 3;
 }
 
 bool Bishop::canApply(Game const& g, Move const& m) const
