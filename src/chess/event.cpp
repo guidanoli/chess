@@ -1,24 +1,25 @@
 #include "event.h"
 
-#include "game.h"
+#include "state.h"
 #include "board.h"
 #include "types.h"
+#include "controller.h"
 
 Move::Move(Square origin, Square dest) :
 	origin(origin), dest(dest)
 {}
 
-bool Move::isValid(Game const& game)
+bool Move::isValid(GameStateControllerConst& game)
 {
 	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
 
-	auto const& moved_piece = game.getBoard()[origin];
+	auto const& moved_piece = game.getPieceAt(origin);
 
 	if (moved_piece.getColour() != game.getTurn())
 		return false;
 
-	auto const& captured_piece = game.getBoard()[dest];
+	auto const& captured_piece = game.getPieceAt(dest);
 
 	if (!captured_piece.isClear() &&
 		captured_piece.getColour() == game.getTurn())
@@ -30,17 +31,17 @@ bool Move::isValid(Game const& game)
 	return moved_piece.getType()->canApply(game, *this);
 }
 
-bool Move::isValidCheck(Game const& game)
+bool Move::isValidCheck(GameStateControllerConst& game)
 {
 	if (!SquareCheck(origin) || !SquareCheck(dest) || origin == dest)
 		return false;
 
-	auto const& moved_piece = game.getBoard()[origin];
+	auto const& moved_piece = game.getPieceAt(origin);
 
 	if (moved_piece.getColour() != game.getTurn())
 		return false;
 
-	auto const& captured_piece = game.getBoard()[dest];
+	auto const& captured_piece = game.getPieceAt(dest);
 
 	if (captured_piece.getType()->getId() != PieceTypeId::KING ||
 		captured_piece.getColour() == game.getTurn())
@@ -59,29 +60,23 @@ Square Move::getDestination() const
 	return dest;
 }
 
-void Move::apply(Game& game)
+void Move::apply(GameStateController& game)
 {
-	auto& board = game.getBoard();
-	auto& origpiece = board[origin];
-	auto& destpiece = board[dest];
-	
-	destpiece = origpiece;
-	origpiece.clear();
+	auto destpiece = game.getPieceAt(dest);
+
+	game.movePiece(origin, dest);
 
 	destpiece.getType()->afterApplied(game, *this);
-
-	game.privateSetSquareAltered(origin, true);
-	game.privateSetSquareAltered(dest, true);
 }
 
-bool Pawn::canApply(Game const& g, Move const& m) const
+bool Pawn::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
 	Direction white_dir = dest - orig;
 	auto white_orig = orig;
-	auto const& origpiece = g.getBoard()[orig];
-	auto const& destpiece = g.getBoard()[dest];
+	auto const& origpiece = g.getPieceAt(orig);
+	auto const& destpiece = g.getPieceAt(dest);
 
 	if (origpiece.getColour() == Colour::BLACK) {
 		white_orig = ~white_orig;
@@ -101,7 +96,7 @@ bool Pawn::canApply(Game const& g, Move const& m) const
 	}
 }
 
-bool King::canApply(Game const& g, Move const& m) const
+bool King::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -115,7 +110,7 @@ bool King::canApply(Game const& g, Move const& m) const
 		   (orig_file != FL_H && orig + DIR_EAST  == dest);
 }
 
-bool Knight::canApply(Game const& g, Move const& m) const
+bool Knight::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto const orig = m.getOrigin();
 	auto const dest = m.getDestination();
@@ -135,7 +130,7 @@ bool Knight::canApply(Game const& g, Move const& m) const
 	return rank_diff + file_diff == 3;
 }
 
-bool Bishop::canApply(Game const& g, Move const& m) const
+bool Bishop::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -178,7 +173,7 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (!g.getBoard()[orig].isClear())
+		if (!g.getPieceAt(orig).isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -187,7 +182,7 @@ bool Bishop::canApply(Game const& g, Move const& m) const
 	}
 }
 
-bool Rook::canApply(Game const& g, Move const& m) const
+bool Rook::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -230,7 +225,7 @@ bool Rook::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (!g.getBoard()[orig].isClear())
+		if (!g.getPieceAt(orig).isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -239,7 +234,7 @@ bool Rook::canApply(Game const& g, Move const& m) const
 	}
 }
 
-bool Queen::canApply(Game const& g, Move const& m) const
+bool Queen::canApply(GameStateControllerConst& g, Move const& m) const
 {
 	auto orig = m.getOrigin();
 	auto dest = m.getDestination();
@@ -276,7 +271,7 @@ bool Queen::canApply(Game const& g, Move const& m) const
 			return true;
 
 		// If hasn't reached yet, there must be no piece there!
-		if (!g.getBoard()[orig].isClear())
+		if (!g.getPieceAt(orig).isClear())
 			return false;
 
 		// Update original square's rank and file
@@ -285,13 +280,13 @@ bool Queen::canApply(Game const& g, Move const& m) const
 	}
 }
 
-void Pawn::afterApplied(Game& g, Move const& m) const
+void Pawn::afterApplied(GameStateController& g, Move const& m) const
 {
 	Direction dir = m.getDestination() - m.getOrigin();
 
 	if (dir == DIR_NORTH * 2 || dir == DIR_SOUTH * 2) {
 		Direction half_dir = Direction((int) dir / 2);
-		g.privateSetEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
+		g.setEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
 	} else {
 		EnPassantPawn enpassant = g.getEnPassantPawn();
 		if (enpassant != EnPassantPawn::NONE) {
@@ -302,7 +297,7 @@ void Pawn::afterApplied(Game& g, Move const& m) const
 					current_pawn_sq += DIR_NORTH; // White pawn
 				else
 					current_pawn_sq += DIR_SOUTH; // Black pawn
-				g.getBoard()[current_pawn_sq].clear();
+				g.getPieceAt(current_pawn_sq).clear();
 			}
 		}
 	}
@@ -312,13 +307,13 @@ Castling::Castling(Square rook) : rook(rook) {}
 
 Square Castling::getRookSquare() const { return rook; }
 
-bool Castling::isValid(Game const& game)
+bool Castling::isValid(GameStateControllerConst& game)
 {
 	// Rook must be in one of the four corners of the board
 	if (rook != SQ_A1 && rook != SQ_A8 && rook != SQ_H1 && rook != SQ_H8)
 		return false;
 
-	const auto& rook_piece = game.getBoard()[rook];
+	const auto& rook_piece = game.getPieceAt(rook);
 
 	// There must be a rook at the given position
 	if (rook_piece.getType()->getId() != PieceTypeId::ROOK)
@@ -327,7 +322,7 @@ bool Castling::isValid(Game const& game)
 	bool white_rook = rook_piece.getColour() == Colour::WHITE;
 	Square king = white_rook ? SQ_E1 : SQ_E8;
 
-	const auto& king_piece = game.getBoard()[king];
+	const auto& king_piece = game.getPieceAt(king);
 
 	// There must be a king at the given position
 	if (king_piece.getType()->getId() != PieceTypeId::KING)
@@ -341,15 +336,15 @@ bool Castling::isValid(Game const& game)
 	// Between the two pieces there must be no other piece
 	Direction king_dir = (king < rook) ? DIR_EAST : DIR_WEST;
 	for (Square sq = king + king_dir; sq != rook; sq += king_dir)
-		if (!game.getBoard()[sq].isClear())
+		if (!game.getPieceAt(sq).isClear())
 			return false;
 
 	return true;
 }
 
-void Castling::apply(Game& game)
+void Castling::apply(GameStateController& game)
 {
-	const auto& rook_piece = game.getBoard()[rook];
+	const auto& rook_piece = game.getPieceAt(rook);
 	bool white_rook = rook_piece.getColour() == Colour::WHITE;
 	Square king = white_rook ? SQ_E1 : SQ_E8;
 

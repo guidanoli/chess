@@ -2,27 +2,27 @@
 
 #include "types.h"
 
-class Game;
+class GameStateController;
 
 // An event is the parent class of all the possible events that can occurr
 // in a chess game and change the game state.
 
-class Event
+class GameEvent
 {
 public:
-	virtual ~Event() {};
+	virtual ~GameEvent() {};
 
 	// Check if event is valid and can be safely applied to game state.
-	virtual bool isValid(Game const& game) = 0;
+	virtual bool isValid(GameStateControllerConst& game) = 0;
 
 	// Apply event to game state, if and only if, the event is valid.
-	virtual void apply(Game& game) = 0;
+	virtual void apply(GameStateController& game) = 0;
 };
 
 // A move means the displacement of a piece on the board to a different tile.
 // Each piece type has its own way to move, and its own restrictions.
 
-class Move : public Event
+class Move : public GameEvent
 {
 public:
 	// Create a move from an origin to a destination (or dest, for short).
@@ -33,19 +33,19 @@ public:
 	Square getDestination() const;
 
 	// Check if move is valid.
-	bool isValid(Game const& game) override;
+	bool isValid(GameStateControllerConst& game) override;
 
 	// Check if move is a valid check, that is, if it could, theoretically,
 	// capture an enemy king.
-	bool isValidCheck(Game const& game);
+	bool isValidCheck(GameStateControllerConst& game);
 
 	// Apply move to game state.
-	void apply(Game& game) override;
+	void apply(GameStateController& game) override;
 private:
 	Square origin, dest;
 };
 
-class Castling : public Event
+class Castling : public GameEvent
 {
 public:
 	// Create a castling event that involves a rook and the king of same colour
@@ -55,10 +55,10 @@ public:
 	Square getRookSquare() const;
 
 	// Check if castling is valid
-	bool isValid(Game const& game) override;
+	bool isValid(GameStateControllerConst& game) override;
 
 	// Apply castling to game state
-	void apply(Game& game) override;
+	void apply(GameStateController& game) override;
 private:
 	Square rook;
 };

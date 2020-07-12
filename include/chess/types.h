@@ -64,7 +64,8 @@ enum class Colour
 	MAX
 };
 
-class Game;
+class GameStateController;
+class GameStateControllerConst;
 class Move;
 
 class PieceType
@@ -72,8 +73,8 @@ class PieceType
 public:
 	PieceType(PieceTypeId id = PieceTypeId::NONE) : id(id) {}
 
-	virtual bool canApply(Game const& g, Move const& m) const { return false; }
-	virtual void afterApplied(Game& g, Move const& m) const {}
+	virtual bool canApply(GameStateControllerConst& g, Move const& m) const { return false; }
+	virtual void afterApplied(GameStateController& g, Move const& m) const {}
 
 	PieceTypeId getId() const { return id; }
 private:
@@ -86,43 +87,43 @@ class Pawn : public PieceType
 {
 public:
 	Pawn() : PieceType(PieceTypeId::PAWN) {}
-	bool canApply(Game const& g, Move const& m) const override;
-	void afterApplied(Game& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
+	void afterApplied(GameStateController& g, Move const& m) const override;
 };
 
 class King : public PieceType
 {
 public:
 	King() : PieceType(PieceTypeId::KING) {}
-	bool canApply(Game const& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
 };
 
 class Queen : public PieceType
 {
 public:
 	Queen() : PieceType(PieceTypeId::QUEEN) {}
-	bool canApply(Game const& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
 };
 
 class Bishop : public PieceType
 {
 public:
 	Bishop() : PieceType(PieceTypeId::BISHOP) {}
-	bool canApply(Game const& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
 };
 
 class Knight : public PieceType
 {
 public:
 	Knight() : PieceType(PieceTypeId::KNIGHT) {}
-	bool canApply(Game const& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
 };
 
 class Rook : public PieceType
 {
 public:
 	Rook() : PieceType(PieceTypeId::ROOK) {}
-	bool canApply(Game const& g, Move const& m) const override;
+	bool canApply(GameStateControllerConst& g, Move const& m) const override;
 };
 
 class Piece
@@ -321,5 +322,38 @@ inline std::ostream& operator<<(std::ostream& out, File fl)
 inline std::ostream& operator<<(std::ostream& out, Square sq)
 {
 	out << getSquareFile(sq) << getSquareRank(sq);
+	return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, Piece piece)
+{
+	char c = piece.getColour() == Colour::WHITE ? 0 : ('A' - 'a');
+	switch (piece.getType()->getId()) {
+	case PieceTypeId::NONE:
+		out << "_";
+		return out;
+	case PieceTypeId::PAWN:
+		c += 'p';
+		break;
+	case PieceTypeId::KING:
+		c += 'k';
+		break;
+	case PieceTypeId::QUEEN:
+		c += 'q';
+		break;
+	case PieceTypeId::BISHOP:
+		c += 'b';
+		break;
+	case PieceTypeId::KNIGHT:
+		c += 'n';
+		break;
+	case PieceTypeId::ROOK:
+		c += 'r';
+		break;
+	default:
+		out << "?";
+		return out;
+	}
+	out << c;
 	return out;
 }

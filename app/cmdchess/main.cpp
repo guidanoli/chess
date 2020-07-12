@@ -4,8 +4,14 @@
 #include <fstream>
 #include <map>
 
-#include "game.h"
+#include "state.h"
+#include "listener.h"
+#include "controller.h"
+#include "types.h"
 #include "event.h"
+#include "error.h"
+#include "board.h"
+#include "debug.h"
 
 using namespace std;
 
@@ -30,11 +36,11 @@ static map<GameError, string> error_message_map;
 
 class CmdGameListener : public GameListener
 {
-	PieceTypeId promotePawn(Game const& game, Square pawn) override;
-	void catchError(Game const& game, GameError error) override;
+	PieceTypeId promotePawn(GameState const& game, Square pawn) override;
+	void catchError(GameState const& game, GameError error) override;
 };
 
-void print_turn(Game const& game)
+void print_turn(GameState const& game)
 {
 	cout << "It's the turn of the "
 		 << (game.getTurn() == Colour::WHITE ? "white" : "black")
@@ -121,7 +127,7 @@ optional<bool> maybe_get_boolean(string yes = "Yes",
 	return opt == 1;
 }
 
-void save_game(Game const& g)
+void save_game(GameState const& g)
 {
 	string ofile;
 	cout << "file = ";
@@ -134,7 +140,7 @@ void save_game(Game const& g)
 		cout << "Error!" << endl;
 }
 
-void load_game(Game& g)
+void load_game(GameState& g)
 {
 	string ifile;
 	cout << "file = ";
@@ -143,7 +149,7 @@ void load_game(Game& g)
 	fs >> g;
 	if (fs) {
 		cout << "Loaded!" << endl;
-		g.pretty();
+		g.pretty(cout);
 		print_turn(g);
 	} else {
 		cout << "Error!" << endl;
@@ -151,7 +157,7 @@ void load_game(Game& g)
 	}
 }
 
-PieceTypeId CmdGameListener::promotePawn(Game const& game, Square pawn)
+PieceTypeId CmdGameListener::promotePawn(GameState const& game, Square pawn)
 {
 	cout << "You may promote your pawn to a new type" << endl;
 	auto piece_opt = maybe_get_piece_type_id();
@@ -161,7 +167,7 @@ PieceTypeId CmdGameListener::promotePawn(Game const& game, Square pawn)
 		return PieceTypeId::QUEEN;
 }
 
-void CmdGameListener::catchError(Game const& game, GameError error)
+void CmdGameListener::catchError(GameState const& game, GameError error)
 {
 	auto error_message = error_message_map.find(error);
 	if (error_message == error_message_map.end())
@@ -172,9 +178,9 @@ void CmdGameListener::catchError(Game const& game, GameError error)
 
 int play(int argc, char** argv)
 {
-	auto g = Game(std::make_shared<CmdGameListener>());
+	auto g = GameState(std::make_shared<CmdGameListener>());
 	while (true) {
-		g.pretty();
+		g.pretty(cout);
 		print_turn(g);
 		while (true) {
 			int opt;
@@ -228,10 +234,12 @@ end:
 
 int create_game_state(int argc, char** argv)
 {
-	auto g = Game(std::make_shared<CmdGameListener>(), true);
+	auto dbg = DebugGameState(std::make_shared<CmdGameListener>());
+	auto dbg_control = dbg.getController();
+	auto g = dbg.getState();
 	int opt;
 	while(true) {
-		g.pretty();
+		g->pretty(cout);
 		cout << "Choose an action:" << endl;
 		cout << "[0] Exit" << endl;
 		cout << "[1] Save" << endl;
@@ -245,9 +253,9 @@ int create_game_state(int argc, char** argv)
 		if (opt == 0) {
 			return 0;
 		} else if (opt == 1) {
-			save_game(g);
+			save_game(*g);
 		} else if (opt == 2) {
-			load_game(g);
+			load_game(*g);
 		} else if (opt == 3) {
 			cout << "square = ";
 			auto sq_opt = maybe_get_square();
@@ -258,7 +266,7 @@ int create_game_state(int argc, char** argv)
 					continue;
 				}
 				if (*piece_type_id_opt == PieceTypeId::NONE) {
-					g.getBoard()[*sq_opt].clear();
+					dbg_control.clearSquare(*sq_opt);
 					continue;
 				}
 				auto colour_opt = maybe_get_colour();
@@ -268,26 +276,25 @@ int create_game_state(int argc, char** argv)
 				}
 				auto piece_colour = *colour_opt;
 				auto piece_type = getPieceTypeById(*piece_type_id_opt);
-				auto& board_piece = g.getBoard()[*sq_opt];
+				auto& board_piece = dbg_control.getPieceAt(*sq_opt);
 				board_piece.setType(piece_type);
-			       	board_piece.setColour(piece_colour);
-				g.setEnPassantPawn(EnPassantPawn::NONE);
+			    board_piece.setColour(piece_colour);
+				dbg_control.setEnPassantPawn(EnPassantPawn::NONE);
 			} else {
 				cout << "Illegal square!" << endl;
 			}
 		} else if (opt == 4) {
-			g.nextTurn();
-			print_turn(g);
+			dbg_control.nextTurn();
+			print_turn(*g);
 		} else if (opt == 5) {
-			auto& board = g.getBoard();
 			for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
-				board[sq].clear();
+				dbg_control.clearSquare(sq);
 		} else if (opt == 6) {
 			auto sq_opt = maybe_get_square();
 			if (sq_opt) {
 				auto altered_opt = maybe_get_boolean("Altered", "Unaltered");
 				if (altered_opt)
-					g.setSquareAltered(*sq_opt, *altered_opt);
+					dbg_control.setSquareAltered(*sq_opt, *altered_opt);
 				else
 					cout << "Illegal boolean!" << endl;
 			} else {
@@ -302,7 +309,14 @@ int create_game_state(int argc, char** argv)
 void init_error_message_map()
 {
 	map_init(error_message_map)
-		(GameError::ILLEGAL_PROMOTION, "Illegal promotion");
+		(GameError::ILLEGAL_PROMOTION, "Illegal promotion")
+		(GameError::IO_COLOUR, "Illegal colour")
+		(GameError::IO_EN_PASSANT_FILE, "Illegal en passant file")
+		(GameError::IO_EN_PASSANT_RANK, "Illegal en passant rank")
+		(GameError::IO_PIECE_TYPE, "Illegal piece type")
+		(GameError::IO_SQUARE, "Illegal square")
+		(GameError::IO_TURN, "Illegal turn")
+		(GameError::IO_VERSION, "Illegal version");
 }
 
 int main(int argc, char** argv)
