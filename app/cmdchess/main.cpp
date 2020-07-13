@@ -2,6 +2,7 @@
 #include <optional>
 #include <cstdlib>
 #include <fstream>
+#include <filesystem>
 #include <map>
 
 #include "state.h"
@@ -12,9 +13,12 @@
 #include "error.h"
 #include "board.h"
 
+namespace fs = std::filesystem;
+
 using namespace std;
 using namespace chesslib;
 
+// Helps initialize a map with a predefined set of (key, value) entries
 template<typename T> struct map_init_helper
 {
 	T& data;
@@ -27,19 +31,23 @@ template<typename T> struct map_init_helper
 	}
 };
 
+// Get a map init helper on a map item
 template<typename T> map_init_helper<T> map_init(T& item)
 {
 	return map_init_helper<T>(item);
 }
 
+// Maps error values to error messages
 static map<GameError, string> error_message_map;
 
+// Implements GameListener, using the stdout to interact with the user
 class CmdGameListener : public GameListener
 {
 	PieceTypeId promotePawn(GameController const& game, Square pawn) override;
 	void catchError(GameController const& game, GameError error) override;
 };
 
+// Print whose turn is it in a game state
 void print_turn(GameState const& game)
 {
 	cout << "It's the turn of the "
@@ -47,6 +55,7 @@ void print_turn(GameState const& game)
 		 << " pieces" << endl;
 }
 
+// Maybe get square (nullopt if input is invalid)
 optional<Square> maybe_get_square()
 {
 	int r_int;
@@ -59,6 +68,7 @@ optional<Square> maybe_get_square()
 	return getSquare(r, f);
 }
 
+// Maybe get move (nullopt if input is invalid)
 optional<shared_ptr<Move>> maybe_get_move()
 {
 	cout << "Piece at... ";
@@ -72,6 +82,7 @@ optional<shared_ptr<Move>> maybe_get_move()
 	return make_shared<Move>(*ini, *fin);
 }
 
+// Maybe get castling event (nullopt if input is invalid)
 optional<shared_ptr<Castling>> maybe_get_castling()
 {
 	cout << "Rook at... ";
@@ -81,6 +92,7 @@ optional<shared_ptr<Castling>> maybe_get_castling()
 	return make_shared<Castling>(*rook);
 }
 
+// Maybe get piece type id (nullopt if input is invalid)
 optional<PieceTypeId> maybe_get_piece_type_id()
 {
 	int opt;
@@ -100,6 +112,7 @@ optional<PieceTypeId> maybe_get_piece_type_id()
 	return piece_type_id;
 }
 
+// Maybe get colour (nullopt if input is invalid)
 optional<Colour> maybe_get_colour()
 {
 	int opt;
@@ -114,6 +127,7 @@ optional<Colour> maybe_get_colour()
 	return colour;
 }
 
+// Maybe get boolean (nullopt if input is invalid)
 optional<bool> maybe_get_boolean(string yes = "Yes",
                                  string no = "No")
 {
@@ -127,63 +141,125 @@ optional<bool> maybe_get_boolean(string yes = "Yes",
 	return opt == 1;
 }
 
-void save_game(GameState const& g)
+// Maybe get path (nullopt if input is invalid or if file doesn't exist or
+// if it doesn't meet the 'is_directory' criterion)
+optional<fs::path> maybe_get_path(bool is_directory)
 {
-	string ofile;
-	cout << "file = ";
-	cin >> ofile;
-	ofstream fs(ofile);
-	fs << g;
-	if (fs)
-		cout << "Saved!" << endl;
+	fs::path path;
+	if (is_directory)
+		cout << "directory = ";
 	else
-		cout << "Error!" << endl;
+		cout << "file = ";
+	cin >> path;
+	if (!fs::exists(path))
+		return nullopt;
+	if (fs::is_directory(path) != is_directory)
+		return nullopt;
+	return path;
 }
 
-void load_game(GameState& g)
+// Maybe save current game state to file obtained by user
+// Returns:
+// nullopt - Invalid input
+// false   - Failed to save
+// true    - Saved successfully
+optional<bool> maybe_save_game(GameState const& g)
 {
-	string ifile;
-	cout << "file = ";
-	cin >> ifile;
-	ifstream fs(ifile);
-	fs >> g;
-	if (fs) {
-		cout << "Loaded!" << endl;
-		g.getBoard().pretty(cout);
-		print_turn(g);
+	auto path_opt = maybe_get_path(false);
+	if (path_opt) {
+		ofstream fs(*path_opt);
+		fs << g;
+		return bool(fs);
 	} else {
-		cout << "Error!" << endl;
-		exit(1);
+		return nullopt;
 	}
 }
 
-void load_game_controller(GameController& gc)
+// Maybe save current game state to file obtained by user
+// Returns:
+// nullopt - Invalid input
+// false   - Failed to save
+// true    - Saved successfully
+optional<bool> maybe_save_game(GameController const& gc)
 {
-	string ifile;
-	cout << "file = ";
-	cin >> ifile;
-	ifstream fs(ifile);
-	if (gc.loadState(fs) && fs) {
-		cout << "Loaded!" << endl;
-		auto const& g = gc.getState();
-		g.getBoard().pretty(cout);
-		print_turn(g);
+	auto path_opt = maybe_get_path(false);
+	if (path_opt) {
+		ofstream fs(*path_opt);
+		return gc.saveState(fs);
 	} else {
-		cout << "Error!" << endl;
-		exit(1);
+		return nullopt;
 	}
 }
 
-void save_game_controller(GameController const& gc)
+// Maybe loads game state from file obtained by user
+// Returns:
+// nullopt - Invalid input
+// false   - Failed to load
+// true    - Loaded successfully
+optional<bool> maybe_load_game(GameState& g)
 {
-	string ofile;
-	cout << "file = ";
-	cin >> ofile;
-	ofstream fs(ofile);
-	if (gc.saveState(fs) && fs)
-		cout << "Saved!" << endl;
-	else
-		cout << "Error!" << endl;
+	auto path_opt = maybe_get_path(false);
+	if (path_opt) {
+		ifstream fs(*path_opt);
+		fs >> g;
+		return bool(fs);
+	} else {
+		return nullopt;
+	}
+}
+
+// Maybe loads game state from file obtained by user
+// Returns:
+// nullopt - Invalid input
+// false   - Failed to load
+// true    - Loaded successfully
+optional<bool> maybe_load_game(GameController& gc)
+{
+	auto path_opt = maybe_get_path(false);
+	if (path_opt) {
+		ifstream fs(*path_opt);
+		return gc.loadState(fs);
+	} else {
+		return nullopt;
+	}
+}
+
+template<class T>
+T triStateToString(optional<bool> tristate, T _true, T _false, T _nullopt)
+{
+	if (tristate) {
+		if (*tristate) {
+			return _true;
+		} else {
+			return _false;
+		}
+	} else {
+		return _nullopt;
+	}
+}
+
+template<class T>
+bool load_game(T& g)
+{
+	auto result = maybe_load_game(g);
+	cout << triStateToString(result,
+				             "Loaded successfully",
+				             "Could not load file",
+				             "Could not find file") << endl;
+	if (result && *result == false)
+		exit(1);
+	return result;
+}
+
+template<class T>
+bool save_game(T& g)
+{
+	auto result = maybe_save_game(g);
+	cout << triStateToString(result,
+				             "Saved successfully",
+				             "Could not save state",
+				             "Could not find file") << endl;
+	return result;
 }
 
 PieceTypeId CmdGameListener::promotePawn(GameController const& game, Square pawn)
@@ -245,9 +321,11 @@ int play(int argc, char** argv)
 					cout << "Illegal input" << endl;
 				}
 			} else if (opt == 8) {
-				load_game_controller(gc);
+				if (load_game(gc))
+					break;
 			} else if (opt == 9) {
-				save_game_controller(gc);
+				if (save_game(gc))
+					break;
 			}
 		}
 	}
@@ -280,9 +358,11 @@ int create_game_state(int argc, char** argv)
 		if (opt == 0) {
 			return 0;
 		} else if (opt == 1) {
-			save_game(g);
+			if (load_game(g))
+				break;
 		} else if (opt == 2) {
-			load_game(g);
+			if (save_game(g))
+				break;
 		} else if (opt == 3) {
 			cout << "square = ";
 			auto sq_opt = maybe_get_square();

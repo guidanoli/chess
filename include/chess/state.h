@@ -1,10 +1,10 @@
 #pragma once
 
-#include <iosfwd>
+#include <iosfwd> // std::istream, std::ostream
 
-#include "board.h"
-#include "types.h"
-#include "error.h"
+#include "board.h" // Board
+#include "types.h" // Colour, Phase, Square
+#include "error.h" // GameError
 
 namespace chesslib
 {
@@ -78,7 +78,7 @@ namespace chesslib
 		Board m_board;
 		Colour m_turn;
 		Phase m_phase;
-		bool m_altered_map[64];
+		bool m_altered_map[SQ_CNT];
 		Square m_enpassant_pawn;
 	};
 

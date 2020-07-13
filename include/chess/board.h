@@ -1,9 +1,9 @@
 #pragma once
 
-#include <iosfwd>
-#include <optional>
+#include <iosfwd> // std::ostream
+#include <optional> // std::optional
 
-#include "types.h"
+#include "types.h" // Piece, Square, PieceTypeId, Colour
 
 namespace chesslib
 {
@@ -31,7 +31,7 @@ namespace chesslib
 		// Find piece in board
 		std::optional<Square> find(PieceTypeId piece_type_id, Colour colour) const;
 	private:
-		Piece m_matrix[64];
+		Piece m_matrix[SQ_CNT];
 	};
 
 }

@@ -144,7 +144,7 @@ istream& chesslib::operator>>(istream& in, GameState& g)
 		throw GameError::IO_EN_PASSANT;
 	}
 	g.m_enpassant_pawn = enpassant;
-	vector<bool> has_piece_map(64, false);
+	vector<bool> has_piece_map(SQ_CNT, false);
 	int square_int;
 	for (in >> square_int; square_int != -1; in >> square_int) {
 		Square square = static_cast<Square>(square_int);

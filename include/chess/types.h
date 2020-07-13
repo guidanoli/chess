@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <iostream>
+#include <memory> // std::shared_ptr
+#include <iostream> // std::istream, std::ostream
 
-#include "defines.h"
+#include "defines.h" // macros
 
 namespace chesslib
 {
@@ -74,7 +74,7 @@ namespace chesslib
 	enum Direction : int
 	{
 		DIR_NONE = 0,
-		DIR_NORTH = 8,
+		DIR_NORTH = RK_CNT,
 		DIR_SOUTH = -DIR_NORTH,
 		DIR_EAST = 1,
 		DIR_WEST = -DIR_EAST,

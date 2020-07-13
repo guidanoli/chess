@@ -21,7 +21,7 @@ do {                                     \
 
 Board::Board()
 {
-	static const PieceTypeId first_rank_ids[8] = {
+	static const PieceTypeId first_rank_ids[FL_CNT] = {
 		PieceTypeId::ROOK,
 		PieceTypeId::KNIGHT,
 		PieceTypeId::BISHOP,
@@ -57,7 +57,7 @@ optional<Square> Board::find(PieceTypeId piece_type_id,
 
 Board::Board(Board const& board)
 { 
-	copy(board.m_matrix, board.m_matrix + 64, m_matrix);
+	copy(board.m_matrix, board.m_matrix + SQ_CNT, m_matrix);
 }
 
 Piece& Board::operator[](Square sq)

@@ -1,12 +1,12 @@
 #pragma once
 
+#include "types.h" // Square, PieceTypeId
+#include "error.h" // GameError
+
 namespace chesslib
 {
 
-	enum class GameError;
 	class GameController;
-	enum class PieceTypeId;
-	enum Square;
 
 	// Sometimes the game can't figure out everything by itself
 	// It needs more input from the user for the game must continue to flow
