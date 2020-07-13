@@ -7,6 +7,9 @@
 #include "listener.h"
 #include "state.h"
 
+using namespace std;
+using namespace chesslib;
+
 class DummyGameListener : public GameListener
 {
 	PieceTypeId promotePawn(GameController const& gameController,
@@ -19,14 +22,14 @@ class DummyGameListener : public GameListener
 	                GameError err) override {}
 };
 
-GameController::GameController(std::unique_ptr<GameState> gameStatePtr,
-                               std::shared_ptr<GameListener> listener) :
-	m_state(std::move(gameStatePtr)),
+GameController::GameController(unique_ptr<GameState> gameStatePtr,
+                               shared_ptr<GameListener> listener) :
+	m_state(move(gameStatePtr)),
 	m_listener(listener)
 {}
 
 GameController::GameController(GameController const& other) :
-	m_state(std::make_unique<GameState>(*other.m_state)),
+	m_state(make_unique<GameState>(*other.m_state)),
 	m_listener(m_listener)
 {}
 
@@ -37,7 +40,7 @@ GameState const& GameController::getState() const
 
 void GameController::clearListener()
 {
-	m_listener = std::make_shared<DummyGameListener>();
+	m_listener = make_shared<DummyGameListener>();
 }
 
 bool GameController::inCheck(Colour c) const
@@ -62,17 +65,17 @@ Square GameController::getKingSquare(Colour c) const
 	return *king_sq_opt;
 }
 
-bool GameController::update(std::shared_ptr<GameEvent> e)
+bool GameController::update(shared_ptr<GameEvent> e)
 {
 	if (!canUpdate(e))
 		return false;
 
-	const EnPassantPawn ep_before = m_state->getEnPassantPawn();
+	const auto enpassant_before = m_state->getEnPassantPawn();
 
 	e->apply(*m_state);
 
-	if (ep_before == m_state->getEnPassantPawn())
-		m_state->setEnPassantPawn(EnPassantPawn::NONE);
+	if (enpassant_before == m_state->getEnPassantPawn())
+		m_state->clearEnPassantPawn();
 
 	lookForPromotion();
 
@@ -92,21 +95,19 @@ void GameController::lookForPromotion()
 		if (piece.getType()->getId() == PieceTypeId::PAWN) {
 			PieceTypeId new_type;
 			while(true) {
-
 				new_type = m_listener->promotePawn(*this, sq);
-
-				if (new_type != PieceTypeId::NONE &&
-					new_type != PieceTypeId::PAWN &&
-					new_type != PieceTypeId::KING)
-				{
-					break;
-				}
-				else
+				if (new_type == PieceTypeId::NONE ||
+					new_type == PieceTypeId::PAWN ||
+					new_type == PieceTypeId::KING)
 				{
 					raiseError(GameError::ILLEGAL_PROMOTION);
 				}
+				else
+				{
+					break;
+				}
 			}
-			piece.setType(getPieceTypeById(new_type));
+			piece.setType(new_type);
 			return;
 		}
 	}
@@ -120,7 +121,7 @@ void GameController::lookForCheckmate()
 		if (p.getColour() != c)
 			continue;
 		for (Square dest_sq = SQ_A1; dest_sq < SQ_CNT; ++dest_sq) {
-			auto move = std::make_shared<Move>(piece_sq, dest_sq);
+			auto move = make_shared<Move>(piece_sq, dest_sq);
 			if (canUpdate(move))
 				return;
 		}
@@ -131,7 +132,7 @@ void GameController::lookForCheckmate()
 		m_state->setPhase(Phase::WHITE_WON);
 }
 
-bool GameController::canUpdate(std::shared_ptr<GameEvent> e) const
+bool GameController::canUpdate(shared_ptr<GameEvent> e) const
 {
 	if (m_state->getPhase() != Phase::RUNNING)
 		return false;
@@ -145,7 +146,7 @@ bool GameController::canUpdate(std::shared_ptr<GameEvent> e) const
 	return true;
 }
 
-bool GameController::wouldEventCauseCheck(std::shared_ptr<GameEvent> e) const
+bool GameController::wouldEventCauseCheck(shared_ptr<GameEvent> e) const
 {
 	return simulate([e] (auto g) {
 		e->apply(*g.m_state);
@@ -162,7 +163,7 @@ bool GameController::simulate(simulationCallback cb) const
 	return cb(copy);
 }
 
-bool GameController::loadState(std::istream& is)
+bool GameController::loadState(istream& is)
 {
 	try
 	{
@@ -173,12 +174,12 @@ bool GameController::loadState(std::istream& is)
 	catch (GameError err)
 	{
 		raiseError(err);
-		is.clear(std::ios::failbit);
+		is.clear(ios::failbit);
 		return false;
 	}
 }
 
-bool GameController::saveState(std::ostream& os) const
+bool GameController::saveState(ostream& os) const
 {
 	os << *m_state;
 	return true;

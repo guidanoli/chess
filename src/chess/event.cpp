@@ -2,6 +2,8 @@
 
 #include "state.h"
 
+using namespace chesslib;
+
 Move::Move(Square origin, Square dest) :
 	origin(origin), dest(dest)
 {}
@@ -81,7 +83,7 @@ bool Pawn::canApply(GameState const& g, Move const& m) const
 	}
 
 	auto enpassant = g.getEnPassantPawn();
-	auto enpassant_sq = getEnPassantPawnSquare(enpassant);
+	auto enpassant_sq = static_cast<Square>(enpassant);
 
 	if (destpiece.isClear() && enpassant_sq != dest) {
 		return (getSquareRank(white_orig) == RK_2 &&
@@ -282,19 +284,17 @@ void Pawn::afterApplied(GameState& g, Move const& m) const
 	Direction dir = m.getDestination() - m.getOrigin();
 
 	if (dir == DIR_NORTH * 2 || dir == DIR_SOUTH * 2) {
-		Direction half_dir = Direction((int) dir / 2);
-		g.setEnPassantPawn(square2EnPassant(m.getOrigin() + half_dir));
+		Direction half_dir = dir / 2;
+		g.setEnPassantPawn(m.getOrigin() + half_dir);
 	} else {
-		EnPassantPawn enpassant = g.getEnPassantPawn();
-		if (enpassant != EnPassantPawn::NONE) {
-			Square enpassant_sq = getEnPassantPawnSquare(enpassant);
-			if (enpassant_sq == m.getDestination()) {
-				Square current_pawn_sq = enpassant_sq;
-				if (getSquareRank(enpassant_sq) == RK_3)
-					current_pawn_sq += DIR_NORTH; // White pawn
+		if (g.hasEnPassant()) {
+			Square enpassant = g.getEnPassantPawn();
+			if (enpassant == m.getDestination()) {
+				if (getSquareRank(enpassant) == RK_3)
+					enpassant += DIR_NORTH; // White pawn
 				else
-					current_pawn_sq += DIR_SOUTH; // Black pawn
-				g.getPieceAt(current_pawn_sq).clear();
+					enpassant += DIR_SOUTH; // Black pawn
+				g.clearSquare(enpassant);
 			}
 		}
 	}

@@ -1,31 +1,33 @@
 #pragma once
 
-// While playing, the player can make some mistakes
-// The way these mistakes are systematically reported is through calls of
-// GameListener::catchError passing the corresponding GameError 'id'.
-enum class GameError
+namespace chesslib
 {
-	// Player tries to promote pawn to an illegal piece type
-	ILLEGAL_PROMOTION,
 
-	// Incompatible version
-	IO_VERSION,
+	// While playing, the player can make some mistakes
+	// The way these mistakes are systematically reported is through calls of
+	// GameListener::catchError passing the corresponding GameError 'id'.
+	enum class GameError
+	{
+		// Player tries to promote pawn to an illegal piece type
+		ILLEGAL_PROMOTION,
 
-	// Invalid turn
-	IO_TURN,
+		// Incompatible version
+		IO_VERSION,
 
-	// Invalid en passant rank
-	IO_EN_PASSANT_RANK,
+		// Invalid turn
+		IO_TURN,
 
-	// Invalid en passant file
-	IO_EN_PASSANT_FILE,
+		// Invalid en passant
+		IO_EN_PASSANT,
 
-	// Invalid square
-	IO_SQUARE,
+		// Invalid square
+		IO_SQUARE,
 
-	// Invalid colour
-	IO_COLOUR,
+		// Invalid colour
+		IO_COLOUR,
 
-	// Invalid piece type
-	IO_PIECE_TYPE,
-};
+		// Invalid piece type
+		IO_PIECE_TYPE,
+	};
+
+}

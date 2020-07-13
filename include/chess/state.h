@@ -4,68 +4,88 @@
 
 #include "board.h"
 #include "types.h"
+#include "error.h"
 
-class GameState
+namespace chesslib
 {
-public:
-	// Initialize a game
-	GameState();
 
-	// Copy a game state
-	GameState(GameState const& other);
+	// This class represents a game state, but does not provide
+	// any business logic whatsoever
+	class GameState
+	{
+	public:
+		// Initialize a game
+		GameState();
 
-	// Skip to next turn
-	void nextTurn();
+		// Copy a game state
+		GameState(GameState const& other);
 
-	// Get turn
-	Colour getTurn() const;
-	
-	// Set game phase
-	void setPhase(Phase phase);
+		// Skip to next turn
+		void nextTurn();
 
-	// Get game phase
-	Phase getPhase() const;
+		// Get turn
+		Colour getTurn() const;
 
-	// Move piece
-	void movePiece(Square origin, Square dest);
+		// Set game phase
+		void setPhase(Phase phase);
 
-	// Set/Get piece at square
-	Piece& getPieceAt(Square sq);
+		// Get game phase
+		Phase getPhase() const;
 
-	// Get piece at square
-	Piece const& getPieceAt(Square sq) const;
+		// Move piece
+		void movePiece(Square origin, Square dest);
 
-	// Clear square
-	void clearSquare(Square sq);
+		// Set/Get piece at square
+		Piece& getPieceAt(Square sq);
 
-	// Set/Get board
-	Board& getBoard();
+		// Get piece at square
+		Piece const& getPieceAt(Square sq) const;
 
-	// Get board (const)
-	Board const& getBoard() const;
+		// Clear square
+		void clearSquare(Square sq);
 
-	// Set en passant pawn
-	void setEnPassantPawn(EnPassantPawn pawn);
+		// Set/Get board
+		Board& getBoard();
 
-	// Get en passant pawn
-	EnPassantPawn getEnPassantPawn() const;
+		// Get board (const)
+		Board const& getBoard() const;
 
-	// Set (in)altered square
-	void setSquareAltered(Square sq, bool altered);
+		// Has en passant square set
+		bool hasEnPassant() const;
 
-	// Check whether square was altered
-	bool wasSquareAltered(Square sq) const;
+		// Set en passant pawn
+		void setEnPassantPawn(Square pawn);
 
-	// Deserialize game state
-	// Throws GameError in case of error
-	friend std::istream& operator>>(std::istream& in, GameState& g);
+		// Clear en passant pawn
+		void clearEnPassantPawn();
 
-	// Serialize game state
-	friend std::ostream& operator<<(std::ostream& out, GameState const& g);
-private:
-	Board m_board;
-	Colour m_turn;
-	Phase m_phase;
-	bool m_altered_map[64];
-	EnPassantPawn m_enpassant_pawn;
-};
+		// Get en passant pawn
+		Square getEnPassantPawn() const;
+
+		// Set (in)altered square
+		void setSquareAltered(Square sq, bool altered);
+
+		// Check whether square was altered
+		bool wasSquareAltered(Square sq) const;
+
+		// Deserialize game state
+		// Throws GameError in case of error
+		friend std::istream& operator>>(std::istream& in, GameState& g);
+
+		// Serialize game state
+		friend std::ostream& operator<<(std::ostream& out, GameState const& g);
+	private:
+		Board m_board;
+		Colour m_turn;
+		Phase m_phase;
+		bool m_altered_map[64];
+		Square m_enpassant_pawn;
+	};
+
+	inline bool EnPassantPawnCheck(Square sq)
+	{
+		auto const rk = getSquareRank(sq);
+		return sq == SQ_CNT || rk == RK_3 || rk == RK_6;
+	}
+
+}

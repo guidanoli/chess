@@ -13,6 +13,7 @@
 #include "board.h"
 
 using namespace std;
+using namespace chesslib;
 
 template<typename T> struct map_init_helper
 {
@@ -300,12 +301,10 @@ int create_game_state(int argc, char** argv)
 					cout << "Illegal colour!" << endl;
 					continue;
 				}
-				auto piece_colour = *colour_opt;
-				auto piece_type = getPieceTypeById(*piece_type_id_opt);
 				auto& board_piece = g.getPieceAt(*sq_opt);
-				board_piece.setType(piece_type);
-			    board_piece.setColour(piece_colour);
-				g.setEnPassantPawn(EnPassantPawn::NONE);
+				board_piece.setType(*piece_type_id_opt);
+			    board_piece.setColour(*colour_opt);
+				g.clearEnPassantPawn();
 			} else {
 				cout << "Illegal square!" << endl;
 			}
@@ -337,8 +336,7 @@ void init_error_message_map()
 	map_init(error_message_map)
 		(GameError::ILLEGAL_PROMOTION, "Illegal promotion")
 		(GameError::IO_COLOUR, "Illegal colour")
-		(GameError::IO_EN_PASSANT_FILE, "Illegal en passant file")
-		(GameError::IO_EN_PASSANT_RANK, "Illegal en passant rank")
+		(GameError::IO_EN_PASSANT, "Illegal en passant")
 		(GameError::IO_PIECE_TYPE, "Illegal piece type")
 		(GameError::IO_SQUARE, "Illegal square")
 		(GameError::IO_TURN, "Illegal turn")

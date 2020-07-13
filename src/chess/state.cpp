@@ -5,16 +5,20 @@
 #include <iostream>
 #include <vector>
 
+#include "defines.h"
 #include "error.h"
+
+using namespace std;
+using namespace chesslib;
 
 GameState::GameState() :
 	m_turn(Colour::WHITE),
 	m_phase(Phase::RUNNING),
-	m_enpassant_pawn(EnPassantPawn::NONE)
+	m_enpassant_pawn(Square::SQ_CNT)
 {
-	std::fill(m_altered_map,
-	          m_altered_map + std::size(m_altered_map),
-	          false);
+	fill(m_altered_map,
+	     m_altered_map + size(m_altered_map),
+	     false);
 }
 
 GameState::GameState(GameState const& other) :
@@ -23,9 +27,9 @@ GameState::GameState(GameState const& other) :
 	m_phase(other.m_phase),
 	m_enpassant_pawn(other.m_enpassant_pawn)
 {
-	std::copy(other.m_altered_map,
-	          other.m_altered_map + std::size(m_altered_map),
-	          m_altered_map);
+	copy(other.m_altered_map,
+	     other.m_altered_map + size(m_altered_map),
+	     m_altered_map);
 }
 
 void GameState::nextTurn()
@@ -59,12 +63,12 @@ Colour GameState::getTurn() const
 	return m_turn;
 }
 
-EnPassantPawn GameState::getEnPassantPawn() const
+Square GameState::getEnPassantPawn() const
 {
 	return m_enpassant_pawn;
 }
 
-void GameState::setEnPassantPawn(EnPassantPawn pawn)
+void GameState::setEnPassantPawn(Square pawn)
 {
 	assert(EnPassantPawnCheck(pawn));
 	m_enpassant_pawn = pawn;
@@ -73,13 +77,13 @@ void GameState::setEnPassantPawn(EnPassantPawn pawn)
 bool GameState::wasSquareAltered(Square sq) const
 {
 	assert(SquareCheck(sq));
-	return m_altered_map[static_cast<std::size_t>(sq)];
+	return m_altered_map[static_cast<size_t>(sq)];
 }
 
 void GameState::setSquareAltered(Square sq, bool altered)
 {
 	assert(SquareCheck(sq));
-	m_altered_map[static_cast<std::size_t>(sq)] = altered;
+	m_altered_map[static_cast<size_t>(sq)] = altered;
 }
 
 void GameState::movePiece(Square origin, Square dest)
@@ -97,13 +101,11 @@ void GameState::movePiece(Square origin, Square dest)
 	setSquareAltered(dest, true);
 }
 
-auto constexpr chesslib_version = 1;
-
-std::ostream& operator<<(std::ostream& out, GameState const& g)
+ostream& chesslib::operator<<(ostream& out, GameState const& g)
 {
-	out << chesslib_version << std::endl;
-	out << static_cast<int>(g.m_turn) << std::endl;
-	out << static_cast<int>(g.m_enpassant_pawn) << std::endl;
+	out << chesslib::major_version << endl;
+	out << static_cast<int>(g.m_turn) << endl;
+	out << static_cast<int>(g.m_enpassant_pawn) << endl;
 	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
 		const auto& p = g.m_board[square];
 		const auto id = p.getType()->getId();
@@ -113,79 +115,78 @@ std::ostream& operator<<(std::ostream& out, GameState const& g)
 		out << static_cast<int>(square) << " ";
 		out << static_cast<int>(p.getColour()) << " ";
 		out << static_cast<int>(id) << " ";
-		out << altered << std::endl;
+		out << altered << endl;
 	}
 	out << -1;
 	return out;
 }
 
-std::istream& operator>>(std::istream& in, GameState& g)
+istream& chesslib::operator>>(istream& in, GameState& g)
 {
 	int version;
 	in >> version;
-	if (version != chesslib_version) {
-		in.setstate(std::ios::failbit);
+	if (version != chesslib::major_version) {
+		in.setstate(ios::failbit);
 		throw GameError::IO_VERSION;
 	}
-	int turn;
-	in >> turn;
-	if (turn < 0 || turn > 1) {
-		in.setstate(std::ios::failbit);
+	int turn_int;
+	in >> turn_int;
+	if (turn_int < 0 || turn_int > 1) {
+		in.setstate(ios::failbit);
 		throw GameError::IO_TURN;
 	}
-	g.m_turn = static_cast<Colour>(turn);
-	int enpassant;
-	in >> enpassant;
-	auto en_passant_pawn = static_cast<EnPassantPawn>(enpassant);
-	if (en_passant_pawn != EnPassantPawn::NONE) {
-		Square square = static_cast<Square>(enpassant);
-		File f = getSquareFile(square);
-		if (!FileCheck(f)) {
-			in.setstate(std::ios::failbit);
-			throw GameError::IO_EN_PASSANT_FILE;
-		}
-		Rank r = getSquareRank(square);
-		if (r != RK_3 && r != RK_6) {
-			in.setstate(std::ios::failbit);
-			throw GameError::IO_EN_PASSANT_RANK;
-		}
+	g.m_turn = static_cast<Colour>(turn_int);
+	int enpassant_int;
+	in >> enpassant_int;
+	auto enpassant = static_cast<Square>(enpassant_int);
+	if (!EnPassantPawnCheck(enpassant)) {
+		in.setstate(ios::failbit);
+		throw GameError::IO_EN_PASSANT;
 	}
-	g.m_enpassant_pawn = static_cast<EnPassantPawn>(enpassant);
-	int sq;
-	in >> sq;
-	std::vector<bool> squares(64, false);
-	while (sq != -1) {
-		Square square = static_cast<Square>(sq);
+	g.m_enpassant_pawn = enpassant;
+	vector<bool> has_piece_map(64, false);
+	int square_int;
+	for (in >> square_int; square_int != -1; in >> square_int) {
+		Square square = static_cast<Square>(square_int);
 		if (!SquareCheck(square)) {
-			in.setstate(std::ios::failbit);
+			in.setstate(ios::failbit);
 			throw GameError::IO_SQUARE;
 		}
-		squares[sq] = true;
-		auto& piece = g.m_board[square];
-		int colour;
-		in >> colour;
-		if (colour < 0 || colour > 1) {
-			in.setstate(std::ios::failbit);
+		has_piece_map[square_int] = true;
+		int colour_int;
+		in >> colour_int;
+		if (colour_int < 0 || colour_int > 1) {
+			in.setstate(ios::failbit);
 			throw GameError::IO_COLOUR;
 		}
-		piece.setColour(static_cast<Colour>(colour));
-		int type;
-		in >> type;
-		auto piece_type_id = static_cast<PieceTypeId>(type);
-		if (!PieceTypeIdCheck(piece_type_id)) {
-			in.setstate(std::ios::failbit);
+		auto& piece = g.m_board[square];
+		piece.setColour(static_cast<Colour>(colour_int));
+		int type_int;
+		in >> type_int;
+		auto type = static_cast<PieceTypeId>(type_int);
+		if (!PieceTypeIdCheck(type)) {
+			in.setstate(ios::failbit);
 			throw GameError::IO_PIECE_TYPE;
 		}
-		piece.setType(getPieceTypeById(piece_type_id));
+		piece.setType(type);
 		bool altered;
 		in >> altered;
 		g.setSquareAltered(square, altered);
-		in >> sq;
 	}
 	for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
-		if (!squares[static_cast<std::size_t>(sq)])
+		if (!has_piece_map[static_cast<size_t>(sq)])
 			g.m_board[sq].clear();
 	return in;
+}
+
+void GameState::clearEnPassantPawn()
+{
+	m_enpassant_pawn = Square::SQ_CNT;
+}
+
+bool GameState::hasEnPassant() const
+{
+	return m_enpassant_pawn != Square::SQ_CNT;
 }
 
 void GameState::clearSquare(Square sq)
