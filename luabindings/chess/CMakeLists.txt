@@ -1,1 +1,0 @@
-target_link_libraries(chesslualib chesslib)
