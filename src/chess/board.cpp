@@ -4,19 +4,24 @@
 
 #include "types.h"
 
+using namespace std;
+using namespace chesslib;
+
 // Places a piece of type t in rank r and file f in matrix m
 // and mirrors it for white and black pieces
-#define R_MIRROR(m, r, f, t)                               \
-do {                                                       \
-	m[r][f].setType(getPieceTypeById(t));              \
-	m[r][f].setColour(Colour::WHITE);                  \
-	m[~r][f].setType(getPieceTypeById(t));             \
-	m[~r][f].setColour(Colour::BLACK);                 \
+#define R_MIRROR(m, r, f, t)             \
+do {                                     \
+	auto& white = m[getSquare(r, f)];    \
+	auto& black = m[getSquare(~r, f)];   \
+	white.setType(t);                    \
+	white.setColour(Colour::WHITE);      \
+	black.setType(t);                    \
+	black.setColour(Colour::BLACK);      \
 } while(0)
 
 Board::Board()
 {
-	static PieceTypeId first_rank_ids[8] = {
+	static const PieceTypeId first_rank_ids[FL_CNT] = {
 		PieceTypeId::ROOK,
 		PieceTypeId::KNIGHT,
 		PieceTypeId::BISHOP,
@@ -36,31 +41,57 @@ Board::Board()
 		R_MIRROR(m_matrix, RK_2, f, PieceTypeId::PAWN);
 }
 
-std::optional<Square> Board::find(PieceTypeId piece_type_id,
+optional<Square> Board::find(PieceTypeId piece_type_id,
                                   Colour colour) const
 {
 	assert(PieceTypeIdCheck(piece_type_id));
 	assert(ColourCheck(colour));
 	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
 		auto& p = (*this)[square];
-		if (*p.getType() == piece_type_id && p.getColour() == colour)
+		if (p.getType()->getId() == piece_type_id &&
+			p.getColour() == colour)
 			return square;
 	}
-	return std::nullopt;
+	return nullopt;
 }
 
-Board::Board(Board const& board) :
-	m_matrix(board.m_matrix)
-{}
+Board::Board(Board const& board)
+{ 
+	copy(board.m_matrix, board.m_matrix + SQ_CNT, m_matrix);
+}
 
 Piece& Board::operator[](Square sq)
 {
 	assert(SquareCheck(sq));
-	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
+	return m_matrix[sq];
 }
 
 Piece const& Board::operator[](Square sq) const
 {
 	assert(SquareCheck(sq));
-	return m_matrix[getSquareRank(sq)][getSquareFile(sq)];
+	return m_matrix[sq];
+}
+
+void Board::pretty(ostream& os) const
+{
+	os << "    ";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << fc << " ";
+	os << endl << "   _";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << "__";
+	os << endl;
+	for (Rank r = RK_8; r >= RK_1; --r) {
+		os << r - RK_1 + 1 << " | ";
+		for (File f = FL_A; f <= FL_H; ++f) {
+			Square sq = getSquare(r, f);
+			Piece p = operator[](sq);
+			os << p << " ";
+		}
+		os << "|" << endl;
+	}
+	os << "   ";
+	for (char fc = 'a'; fc <= 'h'; ++fc)
+		os << "--";
+	os << "-" << endl;
 }
