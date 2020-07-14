@@ -1,1 +1,1 @@
-target_link_libraries(cmdchessapp chesslib)
+target_link_libraries(cmdchessapp chesslib stdc++fs)

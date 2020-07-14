@@ -40,6 +40,9 @@ template<typename T> map_init_helper<T> map_init(T& item)
 // Maps error values to error messages
 static map<GameError, string> error_message_map;
 
+// Print game error
+void print_error(GameError error);
+
 // Implements GameListener, using the stdout to interact with the user
 class CmdGameListener : public GameListener
 {
@@ -168,7 +171,7 @@ optional<bool> maybe_save_game(GameState const& g)
 	auto path_opt = maybe_get_path(false);
 	if (path_opt) {
 		ofstream fs(*path_opt);
-		fs << g;
+		g.save(fs);
 		return bool(fs);
 	} else {
 		return nullopt;
@@ -185,7 +188,7 @@ optional<bool> maybe_save_game(GameController const& gc)
 	auto path_opt = maybe_get_path(false);
 	if (path_opt) {
 		ofstream fs(*path_opt);
-		return gc.saveState(fs);
+		return gc.save(fs);
 	} else {
 		return nullopt;
 	}
@@ -201,7 +204,11 @@ optional<bool> maybe_load_game(GameState& g)
 	auto path_opt = maybe_get_path(false);
 	if (path_opt) {
 		ifstream fs(*path_opt);
-		fs >> g;
+        try {
+            g.load(fs);
+        } catch (GameError err) {
+            print_error(err);
+        }
 		return bool(fs);
 	} else {
 		return nullopt;
@@ -218,7 +225,7 @@ optional<bool> maybe_load_game(GameController& gc)
 	auto path_opt = maybe_get_path(false);
 	if (path_opt) {
 		ifstream fs(*path_opt);
-		return gc.loadState(fs);
+		return gc.load(fs);
 	} else {
 		return nullopt;
 	}
@@ -248,7 +255,7 @@ bool load_game(T& g)
 				             "Could not find file") << endl;
 	if (result && *result == false)
 		exit(1);
-	return result;
+	return bool(*result);
 }
 
 template<class T>
@@ -259,7 +266,7 @@ bool save_game(T& g)
 				             "Saved successfully",
 				             "Could not save state",
 				             "Could not find file") << endl;
-	return result;
+	return bool(result) && *result;
 }
 
 PieceTypeId CmdGameListener::promotePawn(GameController const& game, Square pawn)
@@ -272,13 +279,18 @@ PieceTypeId CmdGameListener::promotePawn(GameController const& game, Square pawn
 		return PieceTypeId::QUEEN;
 }
 
-void CmdGameListener::catchError(GameController const& game, GameError error)
+void print_error(GameError error)
 {
 	auto error_message = error_message_map.find(error);
 	if (error_message == error_message_map.end())
 		cout << "Caught unknown error" << endl;
 	else
 		cout << "Error: " << error_message->second << endl;
+}
+
+void CmdGameListener::catchError(GameController const& game, GameError error)
+{
+	print_error(error);
 }
 
 int play(int argc, char** argv)
@@ -409,6 +421,7 @@ int create_game_state(int argc, char** argv)
 			return 1;
 		}
 	}
+    return 0;
 }
 
 void init_error_message_map()

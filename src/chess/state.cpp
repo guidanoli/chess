@@ -101,15 +101,15 @@ void GameState::movePiece(Square origin, Square dest)
 	setSquareAltered(dest, true);
 }
 
-ostream& chesslib::operator<<(ostream& out, GameState const& g)
+void GameState::save(ostream& out) const
 {
 	out << chesslib::major_version << endl;
-	out << static_cast<int>(g.m_turn) << endl;
-	out << static_cast<int>(g.m_enpassant_pawn) << endl;
+	out << static_cast<int>(m_turn) << endl;
+	out << static_cast<int>(m_enpassant_pawn) << endl;
 	for (Square square = SQ_A1; square < SQ_CNT; ++square) {
-		const auto& p = g.m_board[square];
+		const auto& p = m_board[square];
 		const auto id = p.getType()->getId();
-		const auto altered = g.wasSquareAltered(square);
+		const auto altered = wasSquareAltered(square);
 		if (id == PieceTypeId::NONE)
 			continue;
 		out << static_cast<int>(square) << " ";
@@ -118,10 +118,9 @@ ostream& chesslib::operator<<(ostream& out, GameState const& g)
 		out << altered << endl;
 	}
 	out << -1;
-	return out;
 }
 
-istream& chesslib::operator>>(istream& in, GameState& g)
+void GameState::load(istream& in)
 {
 	int version;
 	in >> version;
@@ -135,7 +134,7 @@ istream& chesslib::operator>>(istream& in, GameState& g)
 		in.setstate(ios::failbit);
 		throw GameError::IO_TURN;
 	}
-	g.m_turn = static_cast<Colour>(turn_int);
+	m_turn = static_cast<Colour>(turn_int);
 	int enpassant_int;
 	in >> enpassant_int;
 	auto enpassant = static_cast<Square>(enpassant_int);
@@ -143,7 +142,7 @@ istream& chesslib::operator>>(istream& in, GameState& g)
 		in.setstate(ios::failbit);
 		throw GameError::IO_EN_PASSANT;
 	}
-	g.m_enpassant_pawn = enpassant;
+	m_enpassant_pawn = enpassant;
 	vector<bool> has_piece_map(SQ_CNT, false);
 	int square_int;
 	for (in >> square_int; square_int != -1; in >> square_int) {
@@ -159,7 +158,7 @@ istream& chesslib::operator>>(istream& in, GameState& g)
 			in.setstate(ios::failbit);
 			throw GameError::IO_COLOUR;
 		}
-		auto& piece = g.m_board[square];
+		auto& piece = m_board[square];
 		piece.setColour(static_cast<Colour>(colour_int));
 		int type_int;
 		in >> type_int;
@@ -171,12 +170,11 @@ istream& chesslib::operator>>(istream& in, GameState& g)
 		piece.setType(type);
 		bool altered;
 		in >> altered;
-		g.setSquareAltered(square, altered);
+		setSquareAltered(square, altered);
 	}
 	for (Square sq = SQ_A1; sq < SQ_CNT; ++sq)
 		if (!has_piece_map[static_cast<size_t>(sq)])
-			g.m_board[sq].clear();
-	return in;
+			m_board[sq].clear();
 }
 
 void GameState::clearEnPassantPawn()

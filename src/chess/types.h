@@ -118,7 +118,13 @@ namespace chesslib
 
 		virtual bool canApply(GameState const& gameState, Move const& move) const { return false; }
 		virtual void afterApplied(GameState& gameState, Move const& move) const {}
-	}
+        
+        PieceTypeId getId() const { return id; }
+    private:
+        PieceTypeId id;
+	};
+
+    class EmptyTile : public PieceType {};
 
 	class Pawn : public PieceType
 	{

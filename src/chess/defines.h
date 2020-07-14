@@ -12,7 +12,7 @@ namespace chesslib
 
 // A `op` B = C
 #define ENABLE_BINARY_OPERATION_ON(A, op, B, C) \
-inline constexpr auto operator ## op(A a, B b) { \
+inline constexpr auto operator op(A a, B b) { \
 	return static_cast<C>(static_cast<int>(a) op static_cast<int>(b)); }
 
 // A `op` B = C ^ B `op` A = C
@@ -27,7 +27,7 @@ inline constexpr auto operator-(T d) { \
 
 // A `op`= B
 #define ENABLE_ACTION_AND_ASSIGNMENT_OPERATION_ON(A, op, B) \
-inline constexpr auto& operator ## op ## =(A& a, B b) { \
+inline constexpr auto& operator  op ## =(A& a, B b) { \
 	return a = a op b; }
 
 // ACheck (0 <= A <= MAX)

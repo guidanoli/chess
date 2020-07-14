@@ -11,6 +11,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+add_subdirectory("ext")
 add_subdirectory("src")
-add_subdirectory("include")
+add_subdirectory("luabindings")
 add_subdirectory("app")

@@ -163,11 +163,11 @@ bool GameController::simulate(simulationCallback cb) const
 	return cb(copy);
 }
 
-bool GameController::loadState(istream& is)
+bool GameController::load(istream& is)
 {
 	try
 	{
-		is >> *m_state;
+		m_state->load(is);
 		lookForCheckmate();
 		return true;
 	}
@@ -179,9 +179,9 @@ bool GameController::loadState(istream& is)
 	}
 }
 
-bool GameController::saveState(ostream& os) const
+bool GameController::save(ostream& os) const
 {
-	os << *m_state;
+	m_state->save(os);
 	return true;
 }
 

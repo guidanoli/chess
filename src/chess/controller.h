@@ -1,6 +1,6 @@
 #pragma once
 
-#include <memory> // std::unique_tr, std::shared_ptr
+#include <memory> // std::unique_ptr, std::shared_ptr
 #include <iosfwd> // std::istream, std::ostream
 #include <functional> // std::function
 
@@ -37,11 +37,11 @@ namespace chesslib
 
 		// Load game state from input stream
 		// Returns true on success
-		bool loadState(std::istream& is);
+		bool load(std::istream& is);
 
 		// Save game state to output stream
 		// Returns true on success
-		bool saveState(std::ostream& os) const;
+		bool save(std::ostream& os) const;
 	private:
 		// Replace listener with a dummy one
 		void clearListener();

@@ -1,0 +1,3 @@
+[submodule "ext/Lua"]
+	path = ext/Lua
+	url = https://github.com/walterschell/Lua.git

@@ -70,10 +70,10 @@ namespace chesslib
 
 		// Deserialize game state
 		// Throws GameError in case of error
-		friend std::istream& operator>>(std::istream& in, GameState& g);
+		void load(std::istream& in);
 
 		// Serialize game state
-		friend std::ostream& operator<<(std::ostream& out, GameState const& g);
+		void save(std::ostream& out) const;
 	private:
 		Board m_board;
 		Colour m_turn;
