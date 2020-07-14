@@ -140,7 +140,7 @@ public:
 	void setColour(Colour cl) { c = cl; }
 	void clear();
 
-	Piece& operator=(Piece& p) {
+	Piece& operator=(Piece const& p) {
 		type = p.type;
 		c = p.c;
 		return *this;
